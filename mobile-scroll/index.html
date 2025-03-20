@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scroll Behavior Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .first-screen {
+            height: 100vh;
+            background: #f0f0f0;
+            position: relative;
+        }
+
+        .scroll-button {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px;
+            cursor: pointer;
+        }
+
+        .content {
+            min-height: 200vh;
+            background: linear-gradient(to bottom, #fff, #e0e0e0);
+            padding: 20px;
+        }
+
+        .arrow {
+            font-size: 24px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="first-screen">
+        <div class="scroll-button" id="scrollButton">
+            <div class="arrow">↓</div>
+        </div>
+    </div>
+    <div class="content">
+        <h1>Scrollable Content</h1>
+        <p>Your content here...</p>
+    </div>
+
+    <script>
+        let isScrollLocked = true;
+        const scrollButton = document.getElementById('scrollButton');
+        const body = document.body;
+
+        // Check if event occurs within button area
+        function isInButtonArea(event) {
+            const rect = scrollButton.getBoundingClientRect();
+            return (
+                event.clientY >= rect.top &&
+                event.clientY <= rect.bottom &&
+                event.clientX >= rect.left &&
+                event.clientX <= rect.right
+            );
+        }
+
+        // Handle wheel events
+        function handleWheel(e) {
+            if (isScrollLocked && !isInButtonArea(e)) {
+                e.preventDefault();
+            } else if (isScrollLocked) {
+                isScrollLocked = false;
+                body.style.overflow = 'auto';
+            }
+        }
+
+        // Handle touch events
+        function handleTouchStart(e) {
+            if (isScrollLocked && isInButtonArea(e.touches[0])) {
+                isScrollLocked = false;
+                body.style.overflow = 'auto';
+            }
+        }
+
+        // Reset state when scrolled to top
+        function handleScroll() {
+            if (window.scrollY === 0) {
+                isScrollLocked = true;
+                body.style.overflow = 'hidden';
+            }
+        }
+
+        // Event listeners
+        window.addEventListener('wheel', handleWheel, { passive: false });
+        window.addEventListener('touchstart', handleTouchStart);
+        window.addEventListener('scroll', handleScroll);
+    </script>
+</body>
+</html>
