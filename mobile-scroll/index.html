@@ -12,7 +12,8 @@
             box-sizing: border-box;
         }
 
-        html, body {
+        html,
+        body {
             overflow: hidden;
             height: 100vh;
         }
@@ -28,6 +29,10 @@
             height: 100vh;
             background: #f0f0f0;
             position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
 
         .scroll-button {
@@ -40,14 +45,26 @@
         }
 
         .content {
-            min-height: 200vh;
             background: linear-gradient(to bottom, #fff, #e0e0e0);
             padding: 20px;
+        }
+
+        .content-item {
+            padding: 10px;
+            margin-bottom: 10px;
         }
 
         .arrow {
             font-size: 24px;
             animation: bounce 2s infinite;
+        }
+
+        .initial-content {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
         }
 
         @keyframes bounce {
@@ -74,13 +91,78 @@
 <body>
     <div class="scroller" id="scroller">
         <div class="first-screen">
+            <div class="initial-content">
+                <h1>Welcome Screen</h1>
+            </div>
             <div class="scroll-button" id="scrollButton">
                 <div class="arrow">↓</div>
             </div>
         </div>
         <div class="content">
-            <h1>Scrollable Content</h1>
-            <p>Your content here...</p>
+            <div class="content-item">
+                <h2>Content Section 1</h2>
+                <p>This is your first content section that will be visible after swiping up.</p>
+            </div>
+            <div class="content-item">
+                <h2>Content Section 2</h2>
+                <p>This is another content section. Add as many as you need.</p>
+            </div>
+            <div class="content-item">
+                <h2>Content Section 3</h2>
+                <p>Keep scrolling to see more content.</p>
+            </div>
+            <div class="content-item">
+                <h2>Content Section 4</h2>
+                <p>More content to demonstrate scrolling.</p>
+            </div>
+            <div class="content-item">
+                <h2>Content Section 5</h2>
+                <p>More content to demonstrate scrolling.</p>
+            </div>
+            <div class="content-item">
+                <h2>Content Section 6</h2>
+                <p>Scroll back to top to return to the initial screen.</p>
+            </div>
+            <div class="content-item">
+                <h2>Content Section 7</h2>
+                <p>This is your first content section that will be visible after swiping up.</p>
+            </div>
+            <div class="content-item">
+                <h2>Content Section 8</h2>
+                <p>This is another content section. Add as many as you need.</p>
+            </div>
+            <div class="content-item">
+                <h2>Content Section 9</h2>
+                <p>Keep scrolling to see more content.</p>
+            </div>
+            <div class="content-item">
+                <h2>Content Section 10</h2>
+                <p>More content to demonstrate scrolling.</p>
+            </div>
+            <div class="content-item">
+                <h2>Content Section 11</h2>
+                <p>More content to demonstrate scrolling.</p>
+            </div>
+            <div class="content-item">
+                <h2>Content Section 12</h2>
+                <p>Scroll back to top to return to the initial screen.</p>
+            </div>
+            <div class="content-item">
+                <h2>Content Section 13</h2>
+                <p>Scroll back to top to return to the initial screen.</p>
+            </div>
+            <div class="content-item">
+                <h2>Content Section 14</h2>
+                <p>Scroll back to top to return to the initial screen.</p>
+            </div>
+            <div class="content-item">
+                <h2>Content Section 15</h2>
+                <p>Scroll back to top to return to the initial screen.</p>
+            </div>
+            <div class="content-item">
+                <h2>Content Section 16</h2>
+                <p>Scroll back to top to return to the initial screen.</p>
+            </div>
         </div>
     </div>
 
@@ -100,7 +182,6 @@
         function handleScroll() {
             if (scroller.scrollTop === 0 && scroller.style.overflow !== 'hidden') {
                 scroller.style.overflow = 'hidden';
-                console.log('locked');
             }
         }
 
@@ -123,7 +204,6 @@
             });
         }
 
-        // setTimeout(() => handleScroll());
         handleSwipe();
         scroller.addEventListener('scroll', handleScroll);
         scroller.addEventListener('wheel', handleScroll, { passive: false });
