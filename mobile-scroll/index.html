@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,7 +13,7 @@
         }
 
         body {
-            overflow: hidden;
+            overflow: auto;
             height: 100vh;
         }
 
@@ -24,10 +25,10 @@
 
         .scroll-button {
             position: absolute;
-            bottom: 90px;
+            bottom: 100px;
             left: 50%;
             transform: translateX(-50%);
-            padding: 50px;
+            padding: 45px;
             cursor: pointer;
         }
 
@@ -43,12 +44,26 @@
         }
 
         @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-10px); }
-            60% { transform: translateY(-5px); }
+
+            0%,
+            20%,
+            50%,
+            80%,
+            100% {
+                transform: translateY(0);
+            }
+
+            40% {
+                transform: translateY(-10px);
+            }
+
+            60% {
+                transform: translateY(-5px);
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="first-screen">
         <div class="scroll-button" id="scrollButton">
@@ -60,52 +75,50 @@
         <p>Your content here...</p>
     </div>
 
+    <script src="swipe-handler.js"></script>
     <script>
-        let isScrollLocked = true;
         const scrollButton = document.getElementById('scrollButton');
         const body = document.body;
-
-        // Check if event occurs within button area
-        function isInButtonArea(event) {
-            const rect = scrollButton.getBoundingClientRect();
-            return (
-                event.clientY >= rect.top &&
-                event.clientY <= rect.bottom &&
-                event.clientX >= rect.left &&
-                event.clientX <= rect.right
-            );
-        }
-
-        // Handle wheel events
-        function handleWheel(e) {
-            if (isScrollLocked && !isInButtonArea(e)) {
-                e.preventDefault();
-            } else if (isScrollLocked) {
-                isScrollLocked = false;
-                body.style.overflow = 'auto';
-            }
-        }
 
         // Handle touch events
         function handleTouchStart(e) {
             if (isScrollLocked && isInButtonArea(e.touches[0])) {
-                isScrollLocked = false;
                 body.style.overflow = 'auto';
             }
         }
 
         // Reset state when scrolled to top
         function handleScroll() {
-            if (window.scrollY === 0) {
-                isScrollLocked = true;
+            if (window.scrollY === 0 && body.style.overflow !== 'hidden') {
                 body.style.overflow = 'hidden';
+                console.log('locked');
             }
         }
 
-        // Event listeners
-        window.addEventListener('wheel', handleWheel, { passive: false });
-        window.addEventListener('touchstart', handleTouchStart);
+        function handleSwipe() {
+            const swipeElement = document.querySelector('.scroll-button');
+            const swiper = new SwipeHandler({
+                threshold: 15,
+                timeThreshold: 300
+            });
+
+            swiper.init(swipeElement);
+
+            swipeElement.addEventListener('swipeup', (e) => {
+                console.log('Swiped up!', e.detail);
+                body.style.overflow = 'auto';
+                window.scrollBy({
+                    top: Math.abs(e.detail.touchesDiff.y),
+                    behavior: 'smooth'
+                });
+            });
+        }
+
+        // handleScroll();
+        handleSwipe();
         window.addEventListener('scroll', handleScroll);
+        window.addEventListener('wheel', handleScroll, { passive: false });
     </script>
 </body>
+
 </html>
