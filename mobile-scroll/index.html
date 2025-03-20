@@ -18,7 +18,7 @@
         }
 
         .scroller {
-            overflow: auto;
+            overflow: hidden;
             height: 100vh;
             position: relative;
             -webkit-overflow-scrolling: touch;
@@ -117,13 +117,13 @@
                 console.log('Swiped up!', e.detail);
                 scroller.style.overflow = 'auto';
                 scroller.scrollBy({
-                    top: Math.abs(e.detail.touchesDiff.y),
+                    top: Math.abs(e.detail.touchesDiff.y * 2),
                     behavior: 'smooth'
                 });
             });
         }
 
-        // handleScroll();
+        // setTimeout(() => handleScroll());
         handleSwipe();
         scroller.addEventListener('scroll', handleScroll);
         scroller.addEventListener('wheel', handleScroll, { passive: false });
