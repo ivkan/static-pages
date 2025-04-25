@@ -108,14 +108,6 @@ async function beforeModal2Init() {
         const aiCostPerConversation = planTotals.ai.price / aiSessions;
         const aiROI = aiAttributedSales / aiCost;
 
-        // console.log({
-        //     aiAttributedSales,
-        //     aiSessions,
-        //     aiCost,
-        //     aiCostPerConversation,
-        //     aiROI,
-        // })
-
         // Clienteling calculations
         const clientelingInboundSales = visitorsNum * percentages.clienteling.engagementRate * percentages.clienteling.inboundConversionRate * (aovNum * (1 + percentages.clienteling.aovUplift));
         const clientelingOutboundSales = percentages.clienteling.outboundCustomersReachedPerMonth * percentages.clienteling.outboundConversionRate * aovNum;
