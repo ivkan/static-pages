@@ -1,933 +1,850 @@
-let min = 1000; // Minimum value for the slider
-let middle = min * 100; // Middle value for the slider range
-let max = middle * 100; // Maximum value for the slider
-let slider;
-let lastCustomValue = 999999999; // Value representing a custom input
-let sliderValue;
-let customPrice;
-let selectedAdditional = {
-    premium_support: true
-};
-let additionalServices;
-let period = 'monthly';
-let columns = getColumns();
-let plans;
-let total = 0;
- // Create an array of values for the slider based on defined ranges
- let sliderValues = [];
-let from = 0; // Initial value for the slider's starting point
-let hideAiButtons = false;
+// Setup module
+// ------------------------------
 
-async function fetchPlanPrices() {
-  try {
-    const response = await fetch('https://portal.immerss.live/vece/api/integration/v1/plans/prices', {
-      method: 'GET', // GET is the default, but explicitly stating it here
-      headers: {
-        // Include any required headers here
-        'Content-Type': 'application/json',
-        'x-platform-id': 'hubspot'
-        // 'Authorization': 'Bearer your-token' // if authentication is required
-      }
-    });
+var validator1, validator2, loading;
+var Registration = function () {
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    //
+    // Setup module components
+    //
 
-    const data = await response.json();
-    console.log('Success:', data);
-    return data;
-  } catch (error) {
-    console.error('Error fetching plan prices:', error);
-  }
-}
+    // International Telephone Input reference
+    window.iti = null;
 
-// Initializes the pricing plans
-async function initializePricing() {
-    try {
-        plans = await fetchPlanPrices();
-        // Create slider values after getting plans data
-        sliderValues = enrichSliderValue([
-            ...splitNumberToChunks(min, middle),
-            ...splitNumberToChunks(middle, max),
-            lastCustomValue
-        ]);
-        
-        // Check if DOM is already loaded
-        if (document.readyState === 'loading') {
-            // If DOM is still loading, add event listener
-            document.addEventListener('DOMContentLoaded', initializeDOMContent);
-        } else {
-            // If DOM is already loaded, execute immediately
-            initializeDOMContent();
-        }
-    } catch (error) {
-        console.error('Failed to initialize pricing:', error);
-    }
-}
-
-// Separate function for DOM initialization
-function initializeDOMContent() {
-    fillContent();
-    initSlider();
-    handlePeriod();
-    handlePremiumSupport();
-    handlePlanChecking();
-    
-    if (hideAiButtons && !location.pathname.startsWith('/testing')) {
-        document.body.classList.add('hide-ai-buttons');
-    }
-}
-
-// Start initialization
-initializePricing();
-
-function getUniqueSessionCounts() {
-    return [...new Set(
-        plans.response.plans.map(plan => plan.company.sessions_count)
-    )].sort((a, b) => a - b);
-}
-
-function enrichSliderValue(sliderValues) {
-    const sessionCounts = getUniqueSessionCounts();
-    sessionCounts.forEach(count => {
-        if (!sliderValues.includes(count)) {
-            sliderValues.push(count);
-        }
-    });
-    return sliderValues.sort((a, b) => a - b);
-}
-
-// Initializes the slider
-function initSlider() {
-    from = Math.floor(sliderValues.length / 3);
-    slider = new TsIonRangeSlider.Slider(document.querySelector('.pricing-slider'), {
-        grid: false,
-        skin: 'round-2',
-        from: from,
-        values: sliderValues,
-        hide_min_max: true,
-        prettify: value => {
-            if (value === max) {
-                return '10M';
-            }
-            if (value > max) {
-                return '10M+';
-            }
-            if (value < 1000000) {
-                return String(value / 1000) + 'K';
-            }
-            const { millions, thousands } = countMillionsAndThousands(value);
-            if (thousands > 0) {
-                return `${millions}.${Math.floor(thousands/100)}M`;
-            }
-            return `${millions}M`;
+    const baseValidationConfigs = {
+        ignore: 'input[type=hidden]', // ignore hidden fields
+        errorElement: 'span',
+        errorClass: 'invalid-feedback',
+        successClass: 'valid-feedback',
+        validClass: 'valid-feedback',
+        success: function (label) {
+            label.parent().find('input, select').removeClass('is-invalid').addClass('is-valid'); // mark the input as success
         },
-        onChange: obj => {
-            onSliderChange(obj);
-            // console.log(obj);
+        showErrors: function (errorMap, errorList) {
+            errorList.forEach(function (item) {
+                $(item.element).removeClass('is-valid').addClass('is-invalid'); // mark the input has having errors
+            });
+            this.defaultShowErrors();
         },
-        onStart: obj => {
-            onSliderChange(obj);
-        }
-    });
-}
-
-function updateAnnualBadge() {
-    document.querySelector('.annual-badge .label').innerHTML = `Save 20%`;
-}
-
-// Updates the premium support UI
-function updatePremiumSupportUI() {
-    document.querySelector('.premium-support-container .checkbox').classList.toggle('checked', !!selectedAdditional.premium_support);
-}
-
-// Handles the premium support toggle
-function handlePremiumSupport() {
-    document.querySelector('.premium-support-container').addEventListener('click', () => {
-        selectedAdditional.premium_support = !selectedAdditional.premium_support;
-        updatePremiumSupportUI();
-        calcPricing();
-    });
-
-    updatePremiumSupportUI();
-}
-
-// Handles the period toggle
-function handlePeriod() {
-    document.querySelector('.annual-container').addEventListener('click', () => {
-        period = 'annual';
-        updatePeriodUI();
-        calcPricing();
-    });
-
-    document.querySelector('.monthly-container').addEventListener('click', () => {
-        period = 'monthly';
-        updatePeriodUI();
-        calcPricing();
-    });
-    updatePeriodUI();
-}
-
-// Updates the period UI
-function updatePeriodUI() {
-    document.querySelector('.annual-container .default-radio').classList.toggle('checked', period === 'annual');
-    document.querySelector('.monthly-container .default-radio').classList.toggle('checked', period === 'monthly');
-}
-
-// Fills the content with the pricing plans
-function fillContent() {
-    const aiAgentFeatures = document.querySelector('#ai-agent-features');
-    const clientelingFeatures = document.querySelector('#clienteling-features');
-    const streamingFeatures = document.querySelector('#streaming-features');
-
-    // Get a specific feature element
-    const getFeatureElement = (element, key) => element.querySelector(`.${key}`);
-
-    // Set all feature data
-    const setAllFeatureData = (featureElement, columnData) => {
-        getFeatureElement(featureElement, 'feature-title').innerHTML = columnData.title;
-        getFeatureElement(featureElement, 'feature-points').innerHTML = columnData.listItems
-            .map(item => `<li><span class="feature-icon"></span> ${item}</li>`)
-            .join('');
-        getFeatureElement(featureElement, 'feature-description').innerHTML = columnData.footerDescription;
-    }
-
-    setAllFeatureData(aiAgentFeatures, columns.ai);
-    setAllFeatureData(clientelingFeatures, columns.clienteling);
-    setAllFeatureData(streamingFeatures, columns.streaming);
-}
-
-// Handles the checkbox click events
-function handlePlanChecking() {
-    calcPricing();
-    if (columns.ai.checked) {
-        getElements(['.pricing-checkbox-ai', '#ai-agent-features'], elements => {
-          elements.forEach(element => {
-            element.classList.toggle('checked', true);
-          });
-        });
-    }
-    if (columns.clienteling.checked) {
-        getElements(['.pricing-checkbox-client', '#clienteling-features'], elements => {
-          elements.forEach(element => {
-            element.classList.toggle('checked', true);
-          });
-        });
-    }
-    if (columns.streaming.checked) {
-        getElements(['.pricing-checkbox-streaming', '#streaming-features'], elements => {
-          elements.forEach(element => {
-            element.classList.toggle('checked', true);
-          });
-        });
-    }
-    console.log('columns.ai.checked', columns.ai.checked);
-
-    addEventListeners(['.pricing-checkbox-ai', '#ai-agent-features'], elements => {
-        columns.ai.checked = !columns.ai.checked;
-        elements.forEach(element => {
-            element.classList.toggle('checked', columns.ai.checked);
-            calcPricing();
-        });
-    });
-
-    addEventListeners(['.pricing-checkbox-client', '#clienteling-features'], elements => {
-        columns.clienteling.checked = !columns.clienteling.checked;
-        elements.forEach(element => {
-            element.classList.toggle('checked', columns.clienteling.checked);
-            calcPricing();
-        });
-    });
-
-    addEventListeners(['.pricing-checkbox-streaming', '#streaming-features'], elements => {
-        columns.streaming.checked = !columns.streaming.checked;
-        elements.forEach(element => {
-            element.classList.toggle('checked', columns.streaming.checked);
-            calcPricing();
-        });
-    });
-}
-
-function calcTotal(_period) {
-    const { additional_services } = plans.response;
-
-    // Calculate pricing total
-    const plansTotal = columnsToArray()
-        .filter(col => col.checked)
-        .map(col => getPlanForCurrentColumn(col, _period))
-        .reduce((accum, price) => {
-            return accum + price.price;
-        }, 0);
-
-    total = plansTotal;
-
-    // Calculate additional values
-    additional_services.forEach(service => {
-        if (selectedAdditional[service.key]) {
-            let additionalValue = 0;
-            if (service.amount_type === 'percent') {
-                additionalValue = (plansTotal / 100) * service.amount;
-            } else {
-                additionalValue = service.amount;
-            }
-            total = total + additionalValue;
-        }
-    });
-    return total;
-}
-
-// Calculates the pricing based on the slider value
-function calcPricing() {
-    const total = calcTotal();
-
-    // Calculate monthly cost for 12 months
-    const yearlyTotalIfPaidMonthly = calcTotal('monthly') * 12;
-    // Calculate the annual total
-    const yearlyTotal = period === 'annual'
-        ? total
-        : calcTotal('annual');
-    // Calculate the discount percentage
-    const annualPercent = yearlyTotalIfPaidMonthly > 0 
-        ? Math.round(((yearlyTotalIfPaidMonthly - yearlyTotal) / yearlyTotalIfPaidMonthly) * 100)
-        : 0;
-
-    document.querySelector('#annual-pervent-value').innerHTML = `Save ${annualPercent}%`;
-    document.querySelector('#total-price').innerHTML = customPrice ? 'Custom' : formatCurrency(total);
-}
-
-// Gets the columns
-function columnsToArray() {
-    return Object.keys(columns)
-        .map(id => {
-            const column = columns[id];
-            column.id = id;
-            return column;
-        })
-        .sort((a, b) => (a.id > b.id) ? 1 : ((b.id > a.id) ? -1 : 0));
-}
-
-// Formats the currency
-function formatCurrency(number, prefix = '$') {
-    const roundedNumber = Number(number.toFixed(2));
-    const hasDecimals = roundedNumber % 1 !== 0;
-    if (!hasDecimals) {
-        return prefix + roundedNumber.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    }
-    return prefix + roundedNumber.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
-
-
-// Updates the slider value and recalculates the pricing
-function onSliderChange(obj) {
-    // Update the store with the new slider values
-    sliderValue = obj.from_value;
-    customPrice = obj.from_value === lastCustomValue; // Check if the custom value is selected
-    calcPricing(); // Recalculate the pricing based on the new slider value
-}
-
-// Gets the plan for the current column
-function getPlanForCurrentColumn(column, _period) {
-    const storePeriod = _period || period;
-    const currentPlans = plans.response.plans
-        .filter(plan => plan.package.key === column.id)
-        .sort((a, b) => {
-            return a.company.sessions_count > b.company.sessions_count
-                ? 1
-                : b.company.sessions_count > a.company.sessions_count
-                    ? -1
-                    : 0;
-        });
-
-    // Find index of the plan with a greater number of sessions than the slider value
-    let index = currentPlans.findIndex(plan => sliderValue < plan.company.sessions_count);
-
-    const plan = index < 1
-        ? currentPlans[0]
-        : currentPlans[index - 1]; // Get previous plan
-
-    return {
-        plan,
-        price: storePeriod === 'annual' ? plan.annual_price : plan.monthly_price
     };
-}
 
-function getElements(selectors, handler) {
-    selectors.forEach(selector => {
-        document.querySelectorAll(selector).forEach(element => {
-            handler(selectors.map(selector => [...document.querySelectorAll(selector)]).flat());
+    const _getParamValueQueryString = function (name, url) {
+        url = url || window.location.href;
+        name = name.replace(/[\[\]]/g, '\\$&');
+        const regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)');
+        const results = regex.exec(url);
+        if (!results) {
+            return null;
+        }
+        if (!results[2]) {
+            return '';
+        }
+        return decodeURIComponent(results[2].replace(/\+/g, ' '));
+    };
+
+    const _getFormData = function (selector) {
+        const obj = {};
+        const formData = $(selector).serializeArray();
+
+        formData.forEach(item => {
+            if (item.name) {
+                obj[item.name] = item.value;
+            }
         });
-    });
-}
 
-// Adds an event listener to multiple elements
-function addEventListeners(selectors, handler) {
-    selectors.forEach(selector => {
-        document.querySelectorAll(selector).forEach(element => {
-            element.addEventListener('click', () => {
-                handler(selectors.map(selector => [...document.querySelectorAll(selector)]).flat());
+        return obj;
+    };
+
+    const _goToAdminArea = function (token) {
+        window.location.href = window.themeVariables.backofficeUrl + '?jwt=' + token;
+    };
+
+    const _beforeSend = function (request) {
+        const authorizationToken = 'Basic ' + btoa('backoffice:uIH5428BhdfENOv1y52nm7f');
+        request.setRequestHeader("Authorization", authorizationToken);
+    };
+
+    /**
+     * Init International Telephone Input
+     */
+    const _componentIntlTelInput = function () {
+        if (!window.intlTelInput) {
+            console.warn('Warning - intlTelInput is not loaded.');
+            return;
+        }
+
+        const telInput = document.querySelector('#phone');
+        if (!telInput) {
+            console.warn('Warning - #phone input not found.');
+            return;
+        }
+
+        // Initialize
+        window.iti = window.intlTelInput(telInput, {
+            initialCountry: "us",
+            separateDialCode: true,
+            autoPlaceholder: 'off',
+            utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.15/js/utils.js",
+        });
+    };
+
+    const _signUpStep1Valid = () => {
+        const validCompany = $('#name').valid();
+        const validWebsite = $('#website_url').valid();
+        const validFirst = $('#first_name').valid();
+        const validLast = $('#last_name').valid();
+        const validPhone = $('#phone').valid();
+        const validEmail = $('#email').valid();
+        const validPassword = $('#password').valid();
+
+        return !!(validCompany
+            && validWebsite
+            && validFirst
+            && validLast
+            && validPhone
+            && validEmail
+            && validPassword);
+    };
+
+    const _signUpStep2Valid = () => {
+        const address = $('#address').valid();
+        const timezone = $('#manually_set_timezone').valid();
+        const storesQuantity = $('#stores_quantity').valid();
+        const platform = $('#platform').valid();
+
+        return !!(address
+            && timezone
+            && storesQuantity
+            && platform);
+
+    };
+
+    /**
+     * Adding reCAPTCHA token to form
+     */
+    const _appendCaptchaInput = () => new Promise(resolve => {
+        try {
+            const id = 'recaptcha_token_' + Math.random().toString(36).slice(-8);
+            $("form.step-1").append('<input name="recaptcha_token" type="hidden" id="' + id + '" />');
+
+            if (grecaptcha) {
+                grecaptcha.ready(function () {
+                    grecaptcha
+                        .execute(themeVariables.reCAPTCHA_key, { action: 'submit' })
+                        .then(token => {
+                            document.getElementById(id).value = token;
+                            resolve();
+                        })
+                        .catch(() => resolve());
+                });
+            } else {
+                resolve();
+            }
+        } catch (e) {
+            console.error(e);
+            resolve();
+        }
+    });
+
+    /**
+     * Sign Up form
+     */
+    const _signUpStepper = function () {
+        const stepperContentEl = document.querySelector('.stepper-content');
+        const stepEls = document.querySelectorAll('.stepper .step');
+
+        stepEls.forEach(stepEl => {
+            stepEl.addEventListener('click', evt => {
+                const step = parseFloat(stepEl.getAttribute('data-step'));
+
+                if (!_signUpStep1Valid() && step > 1) {
+                    return;
+                } else if (!_signUpStep2Valid() && step > 2) {
+                    return;
+                }
+
+                // Dots
+                stepEls.forEach(_stepEl => _stepEl.classList.remove('active'));
+                stepEl.classList.add('active');
+
+                // Content
+                document.querySelectorAll('.stepper-content-item').forEach(_el => {
+                    _el.classList.remove('active');
+                    _el.classList.toggle('disabled', true);
+                });
+                const stepContentEl = document.querySelector('.step-' + step + '-content');
+                stepContentEl.classList.remove('disabled');
+                stepContentEl.classList.add('active');
+
+                if (step === 1) {
+                    const promoImage = stepperContentEl.querySelector('.promo-image');
+                    if (promoImage) {
+                        promoImage.classList.remove('disabled');
+                    }
+                }
+
+                setTimeout(() => {
+                    _resetStep2Form();
+                }, 10);
+
+                // Container
+                stepperContentEl.classList.remove('step-1', 'step-2', 'step-3');
+                stepperContentEl.classList.add('step-' + step)
             });
         });
-    });
-}
+    };
 
-// Splits a number range into equal chunks
-function splitNumberToChunks(step, total) {
-    let value = step; // Initialize the current value
-    const result = [value]; // Start the result array with the first value
+    const specialPattern = /[`!@#$%^&*()+\=\[\]{};':"\\|,.<>\/?~]/;
+    const isNumeric = str => {
+        if (typeof str != "string") return false; // we only process strings!
+        return !isNaN(str) && // use type coercion to parse the _entirety_ of the string (`parseFloat` alone does not do this)...
+            !isNaN(parseFloat(str)) // ...and ensure strings of whitespace fail
+    };
 
-    // Loop to create chunks until reaching the total
-    while (value !== total) {
-        value = value + step; // Increment the value by the step size
-        result.push(value); // Add the new value to the result array
-    }
+    const testUppercaseLowercase = function (strings) {
+        let i = 0;
+        strings = strings.replace(/\s/g, '');
+        let character = '';
+        let hasLower = false;
+        let hasUpper = false;
+        while (i <= strings.length) {
+            character = strings.charAt(i);
 
-    return result; // Return the array of chunk boundaries
-}
+            if (specialPattern.test(character)) {
+                // character is special symbol
+            } else if (!isNaN(character * 1)) {
+                // character is numeric
+            } else {
+                if (character === character.toUpperCase()) {
+                    hasUpper = true;
+                }
+                if (character === character.toLowerCase()) {
+                    hasLower = true;
+                }
+            }
+            i++;
+        }
+        return hasLower && hasUpper;
+    };
 
-// Function to count millions and thousands from a number
-function countMillionsAndThousands(num) {
-    const millions = Math.floor(num / 1000000); // Calculate millions
-    const thousands = Math.floor((num % 1000000) / 1000); // Calculate thousands
-    return { millions, thousands }; // Return the counts
-}
+    const testLetterNumber = function (strings) {
+        let i = 0;
+        strings = strings.replace(/\s/g, '');
+        let character = '';
+        let hasLetter = false;
+        let hasNumber = false;
+        while (i <= strings.length) {
+            character = strings.charAt(i);
 
-function getColumns() {
-    return {
-        ai: {
-            checked: true,
-            order: 1,
-            price: 0,
-            title: 'Custom-Built <br>AI Sales Agent',
-            listItems: [
-                '24/7 Live Sales Agent',
-                'Customized To Your Brand',
-                'Product Recommendation',
-                'No Exaggeration',
-                'Simple Set-up'
-            ],
-            footerDescription: 'Immerss AI Agent includes unlimited<br> customer interactions with no hidden<br> costs or commissions.'
+            if (specialPattern.test(character)) {
+                // character is special symbol
+            } else if (isNumeric(character)) {
+                hasNumber = true;
+            } else {
+                hasLetter = true;
+            }
+            i++;
+        }
+        return hasNumber && hasLetter;
+    };
+
+    /**
+     * Extend validation config
+     */
+    const _extendValidation = function () {
+        if (!$().validate) {
+            console.warn('Warning - validate.min.js is not loaded.');
+            return;
+        }
+        if (!window.iti) {
+            console.warn('Warning - intlTelInput is not loaded.');
+            return;
+        }
+
+        $.validator.addMethod('validateName', function (value) {
+            const pattern = /[`!@#$%^&*()+\=\[\]{};':"\\|<>\/?~]/;
+            return typeof value === 'string' ? !pattern.test(value) : false;
+        }, 'Please enter a valid value');
+
+        $.validator.addMethod('validateCompanyName', function (value) {
+            const pattern = /[<>]/;
+            return typeof value === 'string' ? !pattern.test(value) : false;
+        }, 'Please enter a valid value');
+
+        $.validator.addMethod('validatePhone', function () {
+            if (window.iti.isValidNumber()) {
+                return true;
+            } else {
+                return false;
+            }
+        }, 'Invalid phone number.');
+
+        $.validator.addMethod('validUrl', function (value, element) {
+            const url = $.validator.methods.url.bind(this);
+            const pattern = /[ `!@#$%^&*()+\=\[\]{};'"\\|,<>\?~]/;
+            const isString = typeof value === 'string';
+
+            if (isString && pattern.test(value)) {
+                return false;
+            }
+
+            return url(value, element) || url('http://' + value, element);
+        }, 'Please enter a valid URL');
+
+        $.validator.addMethod('validEmail', function (value, element) {
+            const isString = typeof value === 'string';
+            const pattern1 = /[ `!#$%^&*()\=\[\]{};':"\\|,<>\?~]/;
+
+            if (isString && pattern1.test(value)) {
+                return false;
+            }
+
+            const pattern = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+            return isString ? pattern.test(value) : false;
+        }, 'Please enter a valid email address.');
+
+        $.validator.addMethod('uppercaseLowercase', function (value, element) {
+            const pattern = /(?=.*[a-z])(?=.*[A-Z])/;
+            return typeof value === 'string' ? testUppercaseLowercase(value) : false;
+        }, 'Should contain uppercase and lowercase letters.');
+
+        $.validator.addMethod('letterNumber', function (value, element) {
+            const pattern = /(?=.*[a-zA-Z])(?=.*[0-9])/;
+            return typeof value === 'string' ? testLetterNumber(value) : false;
+        }, 'Should contain letters and numbers.');
+
+        $.validator.addMethod('specialCharacters', function (value, element) {
+            const pattern = /[ `!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]/;
+            return pattern.test(value);
+
+        }, 'Should contain special characters.');
+
+        $.validator.addMethod('users_email_exists', function (value, element) {
+
+            const method = 'remote';
+            const previous = this.previousValue(element, method);
+            const validator = this;
+
+            if (!this.settings.messages[element.name]) {
+                this.settings.messages[element.name] = {};
+            }
+
+            previous.originalMessage = previous.originalMessage || this.settings.messages[element.name][method];
+            this.settings.messages[element.name][method] = previous.message;
+
+            const optionDataString = $.param({ data: value });
+            if (previous.old === optionDataString) {
+                return previous.valid;
+            }
+            previous.old = optionDataString;
+
+            this.startRequest(element);
+
+            const params = new URLSearchParams({ email: $("#email").val() });
+
+            new Promise(function (fulfill) {
+                $.ajax({
+                    type: 'POST',
+                    url: window.themeVariables.apiUrl + 'users/check_email?' + params,
+                    data: {},
+                    dataType: 'json',
+                    beforeSend: _beforeSend,
+                    success: () => fulfill(false),
+                    error: () => fulfill(true)
+                });
+            }).then(function (valid) {
+
+                validator.settings.messages[element.name][method] = previous.originalMessage;
+                const errors = {};
+
+                if (valid) {
+                    errors[element.name] = null;
+                    validator.invalid[element.name] = false;
+                } else {
+                    errors[element.name] = previous.message = 'This email address is already being used.';
+                    validator.invalid[element.name] = true;
+                    validator.showErrors(errors);
+                }
+                previous.valid = valid;
+                validator.stopRequest(element, valid);
+            });
+
+            return "pending";
         },
-        clienteling: {
-            checked: false,
-            order: 2,
-            price: 0,
-            title: 'Comprehensive <br>Clienteling',
-            listItems: [
-                'Live Chat, Video or Voice',
-                'Shopper Journey Insights',
-                'Guided Shopping',
-                'Sales Tracking',
-                'SMS Messaging'
-            ],
-            footerDescription: 'Immerss Clienteling includes unlimited<br> users and customer engagements with<br> no hidden costs or commissions.'
-        },
-        streaming: {
-            checked: false,
-            order: 3,
-            price: 0,
-            title: 'Video <br>Shopping',
-            listItems: [
-                'Shoppable Videos',
-                'Customized Video Player',
-                'Live & Recorded Events',
-                'Sales & Viewership Tracking',
-                'Influencer Enablement'
-            ],
-            footerDescription: 'Immerss Video Shopping includes<br> unlimited shows and viewers with no<br> hidden costs or commissions.'
+            "This email address is already being used."
+        );
+    };
+
+    function partnerStackSignUp() {
+        if (window.growsumo && typeof growsumo.createSignup === 'function') {
+            // 1. Populate the growsumo.data object
+            growsumo.data.name = document.getElementById('name').value;
+            growsumo.data.email = document.getElementById('email').value;
+            // In this case, email is how I uniquely identify my customers
+            growsumo.data.customer_key = document.getElementById('email').value;
+
+            // Register the signup with PartnerStack
+            growsumo.createSignup();
         }
     }
-}
 
-// Transform fakeData to async
-async function fakeData() {
-    // Simulating API call with Promise
-    return new Promise(resolve => {
-        setTimeout(() => {
-            resolve({
-                'status': 'OK',
-                'response': {
-                    'plans': [
-                        {
-                            'package': {
-                                'name': 'Clienteling Module',
-                                'key': 'clienteling'
-                            },
-                            'company': {
-                                'name': 'Startup Small',
-                                'key': 'startup_small',
-                                'sessions_count': 5000
-                            },
-                            'monthly_price': 110,
-                            'annual_price': 1200
-                        },
-                        {
-                            'package': {
-                                'name': 'Streaming Module',
-                                'key': 'streaming'
-                            },
-                            'company': {
-                                'name': 'Startup Small',
-                                'key': 'startup_small',
-                                'sessions_count': 5000
-                            },
-                            'monthly_price': 110,
-                            'annual_price': 1200
-                        },
-                        {
-                            'package': {
-                                'name': 'AI Module',
-                                'key': 'ai'
-                            },
-                            'company': {
-                                'name': 'Startup Small',
-                                'key': 'startup_small',
-                                'sessions_count': 5000
-                            },
-                            'monthly_price': 33,
-                            'annual_price': 360
-                        },
-                        {
-                            'package': {
-                                'name': 'Clienteling Module',
-                                'key': 'clienteling'
-                            },
-                            'company': {
-                                'name': 'Startup Med',
-                                'key': 'startup_med',
-                                'sessions_count': 25000
-                            },
-                            'monthly_price': 165,
-                            'annual_price': 1800
-                        },
-                        {
-                            'package': {
-                                'name': 'Streaming Module',
-                                'key': 'streaming'
-                            },
-                            'company': {
-                                'name': 'Startup Med',
-                                'key': 'startup_med',
-                                'sessions_count': 25000
-                            },
-                            'monthly_price': 165,
-                            'annual_price': 1800
-                        },
-                        {
-                            'package': {
-                                'name': 'AI Module',
-                                'key': 'ai'
-                            },
-                            'company': {
-                                'name': 'Startup Med',
-                                'key': 'startup_med',
-                                'sessions_count': 25000
-                            },
-                            'monthly_price': 110,
-                            'annual_price': 1200
-                        },
-                        {
-                            'package': {
-                                'name': 'Clienteling Module',
-                                'key': 'clienteling'
-                            },
-                            'company': {
-                                'name': 'Startup Large',
-                                'key': 'startup_large',
-                                'sessions_count': 50000
-                            },
-                            'monthly_price': 275,
-                            'annual_price': 3000
-                        },
-                        {
-                            'package': {
-                                'name': 'Streaming Module',
-                                'key': 'streaming'
-                            },
-                            'company': {
-                                'name': 'Startup Large',
-                                'key': 'startup_large',
-                                'sessions_count': 50000
-                            },
-                            'monthly_price': 220,
-                            'annual_price': 2400
-                        },
-                        {
-                            'package': {
-                                'name': 'AI Module',
-                                'key': 'ai'
-                            },
-                            'company': {
-                                'name': 'Startup Large',
-                                'key': 'startup_large',
-                                'sessions_count': 50000
-                            },
-                            'monthly_price': 220,
-                            'annual_price': 2400
-                        },
-                        {
-                            'package': {
-                                'name': 'Clienteling Module',
-                                'key': 'clienteling'
-                            },
-                            'company': {
-                                'name': 'SMB Small',
-                                'key': 'smb_small',
-                                'sessions_count': 100000
-                            },
-                            'monthly_price': 385,
-                            'annual_price': 4200
-                        },
-                        {
-                            'package': {
-                                'name': 'Streaming Module',
-                                'key': 'streaming'
-                            },
-                            'company': {
-                                'name': 'SMB Small',
-                                'key': 'smb_small',
-                                'sessions_count': 100000
-                            },
-                            'monthly_price': 275,
-                            'annual_price': 3000
-                        },
-                        {
-                            'package': {
-                                'name': 'AI Module',
-                                'key': 'ai'
-                            },
-                            'company': {
-                                'name': 'SMB Small',
-                                'key': 'smb_small',
-                                'sessions_count': 100000
-                            },
-                            'monthly_price': 275,
-                            'annual_price': 3000
-                        },
-                        {
-                            'package': {
-                                'name': 'Clienteling Module',
-                                'key': 'clienteling'
-                            },
-                            'company': {
-                                'name': 'SMB Med',
-                                'key': 'smb_med',
-                                'sessions_count': 250000
-                            },
-                            'monthly_price': 2200,
-                            'annual_price': 24000
-                        },
-                        {
-                            'package': {
-                                'name': 'Streaming Module',
-                                'key': 'streaming'
-                            },
-                            'company': {
-                                'name': 'SMB Med',
-                                'key': 'smb_med',
-                                'sessions_count': 250000
-                            },
-                            'monthly_price': 1100,
-                            'annual_price': 12000
-                        },
-                        {
-                            'package': {
-                                'name': 'AI Module',
-                                'key': 'ai'
-                            },
-                            'company': {
-                                'name': 'SMB Med',
-                                'key': 'smb_med',
-                                'sessions_count': 250000
-                            },
-                            'monthly_price': 825,
-                            'annual_price': 9000
-                        },
-                        {
-                            'package': {
-                                'name': 'Clienteling Module',
-                                'key': 'clienteling'
-                            },
-                            'company': {
-                                'name': 'SMB Large',
-                                'key': 'smb_large',
-                                'sessions_count': 500000
-                            },
-                            'monthly_price': 3575,
-                            'annual_price': 39000
-                        },
-                        {
-                            'package': {
-                                'name': 'Streaming Module',
-                                'key': 'streaming'
-                            },
-                            'company': {
-                                'name': 'SMB Large',
-                                'key': 'smb_large',
-                                'sessions_count': 500000
-                            },
-                            'monthly_price': 1650,
-                            'annual_price': 18000
-                        },
-                        {
-                            'package': {
-                                'name': 'AI Module',
-                                'key': 'ai'
-                            },
-                            'company': {
-                                'name': 'SMB Large',
-                                'key': 'smb_large',
-                                'sessions_count': 500000
-                            },
-                            'monthly_price': 1650,
-                            'annual_price': 18000
-                        },
-                        {
-                            'package': {
-                                'name': 'Clienteling Module',
-                                'key': 'clienteling'
-                            },
-                            'company': {
-                                'name': 'MidMarket Small',
-                                'key': 'mid_market_small',
-                                'sessions_count': 1000000
-                            },
-                            'monthly_price': 4950,
-                            'annual_price': 54000
-                        },
-                        {
-                            'package': {
-                                'name': 'Streaming Module',
-                                'key': 'streaming'
-                            },
-                            'company': {
-                                'name': 'MidMarket Small',
-                                'key': 'mid_market_small',
-                                'sessions_count': 1000000
-                            },
-                            'monthly_price': 2200,
-                            'annual_price': 24000
-                        },
-                        {
-                            'package': {
-                                'name': 'AI Module',
-                                'key': 'ai'
-                            },
-                            'company': {
-                                'name': 'MidMarket Small',
-                                'key': 'mid_market_small',
-                                'sessions_count': 1000000
-                            },
-                            'monthly_price': 2200,
-                            'annual_price': 24000
-                        },
-                        {
-                            'package': {
-                                'name': 'Clienteling Module',
-                                'key': 'clienteling'
-                            },
-                            'company': {
-                                'name': 'MidMarket Med',
-                                'key': 'mid_market_med',
-                                'sessions_count': 2500000
-                            },
-                            'monthly_price': 7242,
-                            'annual_price': 79000
-                        },
-                        {
-                            'package': {
-                                'name': 'Streaming Module',
-                                'key': 'streaming'
-                            },
-                            'company': {
-                                'name': 'MidMarket Med',
-                                'key': 'mid_market_med',
-                                'sessions_count': 2500000
-                            },
-                            'monthly_price': 3575,
-                            'annual_price': 39000
-                        },
-                        {
-                            'package': {
-                                'name': 'AI Module',
-                                'key': 'ai'
-                            },
-                            'company': {
-                                'name': 'MidMarket Med',
-                                'key': 'mid_market_med',
-                                'sessions_count': 2500000
-                            },
-                            'monthly_price': 3300,
-                            'annual_price': 36000
-                        },
-                        {
-                            'package': {
-                                'name': 'Clienteling Module',
-                                'key': 'clienteling'
-                            },
-                            'company': {
-                                'name': 'MidMarket Large',
-                                'key': 'mid_market_large',
-                                'sessions_count': 5000000
-                            },
-                            'monthly_price': 9350,
-                            'annual_price': 102000
-                        },
-                        {
-                            'package': {
-                                'name': 'Streaming Module',
-                                'key': 'streaming'
-                            },
-                            'company': {
-                                'name': 'MidMarket Large',
-                                'key': 'mid_market_large',
-                                'sessions_count': 5000000
-                            },
-                            'monthly_price': 4950,
-                            'annual_price': 54000
-                        },
-                        {
-                            'package': {
-                                'name': 'AI Module',
-                                'key': 'ai'
-                            },
-                            'company': {
-                                'name': 'MidMarket Large',
-                                'key': 'mid_market_large',
-                                'sessions_count': 5000000
-                            },
-                            'monthly_price': 4400,
-                            'annual_price': 48000
-                        },
-                        {
-                            'package': {
-                                'name': 'Clienteling Module',
-                                'key': 'clienteling'
-                            },
-                            'company': {
-                                'name': 'Enterprise Small',
-                                'key': 'enterprise_small',
-                                'sessions_count': 7500000
-                            },
-                            'monthly_price': 15033,
-                            'annual_price': 164000
-                        },
-                        {
-                            'package': {
-                                'name': 'Streaming Module',
-                                'key': 'streaming'
-                            },
-                            'company': {
-                                'name': 'Enterprise Small',
-                                'key': 'enterprise_small',
-                                'sessions_count': 7500000
-                            },
-                            'monthly_price': 7242,
-                            'annual_price': 79000
-                        },
-                        {
-                            'package': {
-                                'name': 'AI Module',
-                                'key': 'ai'
-                            },
-                            'company': {
-                                'name': 'Enterprise Small',
-                                'key': 'enterprise_small',
-                                'sessions_count': 7500000
-                            },
-                            'monthly_price': 5500,
-                            'annual_price': 60000
-                        },
-                        {
-                            'package': {
-                                'name': 'Clienteling Module',
-                                'key': 'clienteling'
-                            },
-                            'company': {
-                                'name': 'Enterprise Med',
-                                'key': 'enterprise_med',
-                                'sessions_count': 10000000
-                            },
-                            'monthly_price': 21450,
-                            'annual_price': 234000
-                        },
-                        {
-                            'package': {
-                                'name': 'Streaming Module',
-                                'key': 'streaming'
-                            },
-                            'company': {
-                                'name': 'Enterprise Med',
-                                'key': 'enterprise_med',
-                                'sessions_count': 10000000
-                            },
-                            'monthly_price': 10450,
-                            'annual_price': 114000
-                        },
-                        {
-                            'package': {
-                                'name': 'AI Module',
-                                'key': 'ai'
-                            },
-                            'company': {
-                                'name': 'Enterprise Med',
-                                'key': 'enterprise_med',
-                                'sessions_count': 10000000
-                            },
-                            'monthly_price': 6600,
-                            'annual_price': 72000
-                        },
-                        {
-                            'package': {
-                                'name': 'Clienteling Module',
-                                'key': 'clienteling'
-                            },
-                            'company': {
-                                'name': 'Enterprise Large',
-                                'key': 'enterprise_large',
-                                'sessions_count': 999999999
-                            },
-                            'monthly_price': 999999,
-                            'annual_price': 999999
-                        },
-                        {
-                            'package': {
-                                'name': 'Streaming Module',
-                                'key': 'streaming'
-                            },
-                            'company': {
-                                'name': 'Enterprise Large',
-                                'key': 'enterprise_large',
-                                'sessions_count': 999999999
-                            },
-                            'monthly_price': 999999,
-                            'annual_price': 999999
-                        },
-                        {
-                            'package': {
-                                'name': 'AI Module',
-                                'key': 'ai'
-                            },
-                            'company': {
-                                'name': 'Enterprise Large',
-                                'key': 'enterprise_large',
-                                'sessions_count': 999999999
-                            },
-                            'monthly_price': 999999,
-                            'annual_price': 999999
-                        }
-                    ],
-                    'additional_services': [
-                        {
-                            'amount_type': 'percent',
-                            'amount': 20.0,
-                            'name': 'Premium support',
-                            'key': 'premium_support',
-                            'hint': 'Includes a dedicated account manager, ongoing training, and a 2-hour guaranteed response time during business hours.'
-                        }
-                    ]
+    const objectToQueryUrl = function (object) {
+
+        Object.keys(object).forEach(key => {
+            if (!object[key]) {
+                delete object[key];
+            }
+        });
+
+        return new URLSearchParams(object).toString();
+    };
+
+    const _getErrorMessage = function (value) {
+        const defaultMessage = 'An error has occurred';
+        try {
+            const json = JSON.parse(value).message;
+            const message = Object.keys(json).map(key => json[key])[0];
+
+            return message || defaultMessage;
+        }
+        catch (e) {
+            return defaultMessage;
+        }
+    };
+
+    const _sendRequest = function () {
+
+        const step1Data = _getFormData('form.step-1');
+        const step2Data = _getFormData('form.step-2');
+        const formData = { ...step1Data, ...step2Data };
+
+        if (Number(_getParamValueQueryString('shopify')) === 1) {
+            formData['shopify'] = 1;
+        }
+
+        // Update the phone field before submitting the form
+        formData['phone'] = window.iti.getNumber();
+        // recaptcha_token
+
+        $.ajax({
+            type: 'POST',
+            url: window.themeVariables.apiUrl + window.themeVariables.sign_up_url,
+            data: formData,
+            dataType: 'json',
+            beforeSend: _beforeSend,
+            success: response => {
+                partnerStackSignUp();
+                _formSubmitToggle(false);
+                setTimeout(() => {
+                    const force_password_reset = response?.response?.force_password_reset;
+                    const confirmed = response?.response?.confirmed;
+                    const enabled = response?.response?.enabled;
+                    const params = {};
+
+                    if (force_password_reset) {
+                        params.need_change_password = true;
+                    }
+                    if (!confirmed) {
+                        params.need_email_confirm = true;
+                    }
+                    if (!enabled) {
+                        params.need_admin_confirm = true;
+                    }
+
+                    window.location.href = window.themeVariables.backofficeUrl + '?' + objectToQueryUrl({
+                        ...params,
+                        refresh_token: response.response.refresh_token,
+                        access_token: response.response.access_token,
+                    });
+                }, 50);
+            },
+            error: function (jqXHR, textStatus, err) {
+
+                const message = _getErrorMessage(jqXHR.responseText);
+                window.showNotification(message, {
+                    error: true,
+                    closeTimeout: 10000
+                });
+                // $('form.step-1').trigger('reset');
+                // $('form.step-2').trigger('reset');
+                console.log(jqXHR, '\n', textStatus, '\n', err);
+                _formSubmitToggle(false);
+            }
+        });
+    };
+
+    const _resetStep2Form = function () {
+        validator2.resetForm();
+        $('form.step-2').find('input, select').removeClass('is-invalid').addClass('is-valid');
+        console.log('resetForm 2');
+    };
+
+    /**
+     * First step validation
+     */
+    const _signUpStep1Validate = function () {
+
+        const submitEl = $('form.step-1 button');
+        const formEl = $('form.step-1');
+        const formIsValid = () => formEl.validate().checkForm();
+
+        validator1 = formEl.validate({
+            ...baseValidationConfigs,
+            rules: {
+                name: {
+                    required: true,
+                    minlength: 2,
+                    validateCompanyName: true,
+                },
+                website_url: {
+                    required: true,
+                    validUrl: true
+                },
+                first_name: {
+                    required: true,
+                    minlength: 2,
+                    validateName: true,
+                },
+                last_name: {
+                    required: true,
+                    minlength: 2,
+                    validateName: true,
+                },
+                phone: {
+                    required: true,
+                    validatePhone: true
+                },
+                email: {
+                    required: true,
+                    validEmail: true,
+                    users_email_exists: true
+                },
+                password: {
+                    required: true,
+                    uppercaseLowercase: true,
+                    letterNumber: true,
+                    specialCharacters: true,
+                    minlength: 8,
+                    maxlength: 48
+                },
+            },
+            messages: {
+                website_url: {
+                    required: 'This field is required.',
+                    validUrl: 'Please enter a valid URL.'
+                },
+                phone: {
+                    required: 'This field is required.',
+                    validatePhone: 'Please enter a valid phone number.'
+                },
+                name: {
+                    required: 'This field is required.',
+                    minlength: 'Please enter at least 2 characters.'
+                },
+                email: {
+                    required: 'This field is required.',
+                    validEmail: 'Please enter a valid email address.',
+                    users_email_exists: 'This email address is already being used.'
+                },
+                first_name: {
+                    required: 'This field is required.',
+                    minlength: 'Please enter at least 2 characters.'
+                },
+                last_name: {
+                    required: 'This field is required.',
+                    minlength: 'Please enter at least 2 characters.'
+                },
+                password: {
+                    required: 'This field is required.',
+                    minlength: 'Please enter at least 8 characters.',
+                    maxlength: 'Please enter less than 48 characters.',
+                    uppercaseLowercase: 'Should contain uppercase and lowercase letters.',
+                    letterNumber: 'Should contain letters and numbers.',
+                    specialCharacters: 'Should contain special characters.'
+                },
+            },
+        });
+
+        // Watch button disabled
+        $('form.step-1 input, form.step-1 select').on('input change', e => {
+            if (formIsValid() && submitEl.hasClass("disabled")) {
+                submitEl.toggleClass('disabled', false);
+            } else if (!formIsValid() && !submitEl.hasClass("disabled")) {
+                submitEl.toggleClass('disabled', true);
+            }
+        });
+
+        submitEl.on('click', (e) => {
+            e.preventDefault();
+
+            if (_signUpStep1Valid()) {
+                // Move next step
+                $('.stepper .step-2').click();
+
+                setTimeout(() => {
+                    _resetStep2Form();
+                }, 10);
+            }
+        });
+    };
+
+    const _formSubmitToggle = function (_loading) {
+        loading = _loading;
+        const submitEl = document.querySelector('form.step-2 button');
+        if (submitEl) {
+            submitEl.disabled = _loading;
+            submitEl.classList.toggle('btn-loading', _loading);
+        }
+    };
+
+    /**
+     * Second step validation
+     */
+    const _signUpStep2Validate = function () {
+        const submitEl = $('form.step-2 button');
+        const formEl = $('form.step-1');
+        const formIsValid = () => formEl.validate().checkForm();
+
+        validator2 = $('form.step-2').validate({
+            ...baseValidationConfigs,
+            rules: {
+                address: {
+                    minlength: 10,
+                    required: true,
+                },
+                manually_set_timezone: {
+                    required: true,
+                },
+                stores_quantity: {
+                    required: true,
+                    min: 0,
+                },
+                platform: {
+                    required: true,
+                },
+            },
+            messages: {
+                address: {
+                    minlength: 'Please enter at least 10 characters.'
+                },
+                manually_set_timezone: {
+                    required: 'This field is required.',
+                },
+                stores_quantity: {
+                    required: 'This field is required.',
+                    min: 'Please enter a value greater than or equal to 0',
+                    integer: 'Please select whole number (ex. 1,2,3,4)'
+                },
+                platform: {
+                    required: 'This field is required.',
+                },
+            }
+        });
+
+        // Watch button disabled
+        $('form.step-2 input, form.step-2 select').on('input change', e => {
+            if (formIsValid() && submitEl.hasClass("disabled")) {
+                submitEl.toggleClass('disabled', false);
+            } else if (!formIsValid() && !submitEl.hasClass("disabled")) {
+                submitEl.toggleClass('disabled', true);
+            }
+        });
+
+        submitEl.on('click', (e) => {
+            e.preventDefault();
+
+            if (_signUpStep2Valid() && !loading) {
+                // Move next step
+                // $('.stepper .step-3').click();
+
+                _formSubmitToggle(true);
+
+                _appendCaptchaInput().finally(() => {
+                    setTimeout(() => _sendRequest(), 100);
+                });
+            }
+        });
+    };
+
+    const _togglePasswordVisibility = function () {
+        $("body").on('click', '.toggle-password', function () {
+            $(this).toggleClass("ion-ios-eye ion-ios-eye-off");
+            const input = document.querySelector("#password");
+            if (input.type === "password") {
+                input.type = "text";
+            } else {
+                input.type = "password";
+            }
+        });
+    };
+
+    const _signUpStep3Validate = function () {
+        $('#sign-up-submit').on('click', function (e) {
+            e.preventDefault();
+
+            const btn = $(this);
+            btn.find('.text').css('display', 'none');
+            btn.addClass("btn-loading");
+
+            // Sign Up here...
+
+        });
+    };
+
+    const _handleInputs = function () {
+        function inputProcess() {
+            $(this).toggleClass('has-value', !!$(this).val());
+            $(this).parent().toggleClass('has-value', !!$(this).val());
+            const formDiv = $(this).closest('.im-form-control-wrap');
+            if (formDiv) {
+                $(formDiv).toggleClass('has-value', !!$(this).val());
+            }
+        }
+
+        $('form').each(function () {
+            $(this).find('input, textarea, select').on('input change', inputProcess);
+            setTimeout(() => {
+                $(this).find('input, textarea, select').each(inputProcess);
+            }, 2000);
+        });
+    };
+
+    const _deselectInput = function (selector) {
+        $(selector).closest('.float-input').removeClass('select has-value');
+    };
+
+    const _setSelectEmptyValue = function (selector) {
+        $(selector).prop("selectedIndex", -1);
+        _deselectInput(selector);
+    };
+
+    const _fixSelectInitialValues = function () {
+        _setSelectEmptyValue('#platform');
+        _setSelectEmptyValue('#manually_set_timezone');
+        _deselectInput('#stores_quantity');
+    };
+
+    const _fixBrowserException = function () {
+        const userAgentString = navigator.userAgent;
+        const edgeAgent = userAgentString.indexOf('Edg/') > -1 || userAgentString.indexOf('Edge/') > -1;
+
+        if (edgeAgent) {
+            const togglePassButton = document.querySelector('.toggle-password');
+
+            if (togglePassButton) {
+                togglePassButton.classList.add('hidden');
+            }
+        }
+    };
+
+    const _clearForm = function () {
+        try {
+            document.querySelector('form.step-1').reset();
+            document.querySelector('form.step-2').reset();
+        } catch (e) {
+        }
+    };
+
+    const _fillFormValues = function () {
+        // Parse URL query parameters
+        const queryParams = new URLSearchParams(window.location.search);
+
+        // Handle website parameter
+        if (queryParams.has('website')) {
+            const websiteInput = document.getElementById('website_url');
+            if (websiteInput) {
+                websiteInput.value = queryParams.get('website');
+            }
+        }
+
+        // Handle name parameter (split into first_name and last_name if possible)
+        if (queryParams.has('name')) {
+            const nameValue = queryParams.get('name');
+            const firstNameInput = document.getElementById('first_name');
+            const lastNameInput = document.getElementById('last_name');
+
+            if (nameValue.includes(' ')) {
+                // Split by first space
+                const spaceIndex = nameValue.indexOf(' ');
+                const firstName = nameValue.substring(0, spaceIndex);
+                const lastName = nameValue.substring(spaceIndex + 1);
+
+                if (firstNameInput) firstNameInput.value = firstName;
+                if (lastNameInput) lastNameInput.value = lastName;
+            } else {
+                // Can't split, only fill first_name
+                if (firstNameInput) firstNameInput.value = nameValue;
+            }
+        }
+
+        // Handle email parameter
+        if (queryParams.has('email')) {
+            const emailInput = document.getElementById('email');
+            if (emailInput) {
+                emailInput.value = queryParams.get('email');
+            }
+        }
+
+        // Handle platform parameter
+        if (queryParams.has('platform')) {
+            const platformSelect = document.getElementById('platform');
+            if (platformSelect) {
+                platformSelect.value = queryParams.get('platform');
+            }
+        }
+
+        // Handle stores parameter (convert to positive number)
+        if (queryParams.has('stores')) {
+            const storesInput = document.getElementById('stores_quantity');
+            if (storesInput) {
+                let storesValue = parseInt(queryParams.get('stores'), 10);
+                // Convert negative to positive
+                if (storesValue < 0) {
+                    storesValue = Math.abs(storesValue);
                 }
-            });
-        }, 100);
-    });
-}
+                storesInput.value = storesValue;
+            }
+        }
+    }
+
+    //
+    // Return objects assigned to module
+    //
+
+    return {
+        initComponents: function () {
+            _clearForm();
+            _componentIntlTelInput();
+            _signUpStepper();
+            _extendValidation();
+            _signUpStep1Validate();
+            _signUpStep2Validate();
+            _togglePasswordVisibility();
+            _signUpStep3Validate();
+            _handleInputs();
+            _fixSelectInitialValues();
+            _fixBrowserException();
+            _fillFormValues();
+            
+            // window.testSubmit = function () {
+            //     _appendCaptchaInput().finally(() =>
+            //     {
+            //         setTimeout(() =>
+            //         {
+            //             const step1Data = _getFormData('form.step-1');
+            //             const step2Data = _getFormData('form.step-2');
+            //             const formData = {...step1Data, ...step2Data};
+            //             console.log(formData);
+            //         }, 100);
+            //     });
+            // }
+        }
+    }
+}();
+
+// Initialize module
+// ------------------------------
+
+document.addEventListener('DOMContentLoaded', function () {
+    Registration.initComponents();
+});

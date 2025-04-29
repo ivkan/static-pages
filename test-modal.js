@@ -200,7 +200,7 @@ async function beforeModal2Init() {
                 traffic: 'traffic-value',
                 conversionRate: 'conversion-rate-value',
                 aov: 'aov-value',
-                revenue: 'revenue-value',
+                revenue: ['revenue-value', 'total-revenue-value'],
             },
             ai: {
                 revenue: 'ai-revenue-value',
@@ -219,7 +219,7 @@ async function beforeModal2Init() {
             },
             total: {
                 revenue: 'expected-revenue-value',
-                cost: 'total-cost-value',
+                cost: ['total-cost-value', 'summary-cost-value'],
                 discountedCost: 'total-discounted-cost-value',
                 roi: 'total-roi-value',
                 annualSavings: 'total-annual-savings-value',
@@ -229,9 +229,24 @@ async function beforeModal2Init() {
         // Fill the elements with the results
         Object.keys(results).forEach(key => {
             Object.keys(results[key]).forEach(subKey => {
-                const element = document.getElementById(elementIds[key][subKey]);
-                if (element) {
-                    element.innerHTML = results[key][subKey];
+                const ids = elementIds[key][subKey];
+                if (!ids) return;
+                
+                const value = results[key][subKey];
+                
+                // Handle both single string ID and array of IDs
+                if (Array.isArray(ids)) {
+                    ids.forEach(id => {
+                        const element = document.getElementById(id);
+                        if (element) {
+                            element.innerHTML = value;
+                        }
+                    });
+                } else {
+                    const element = document.getElementById(ids);
+                    if (element) {
+                        element.innerHTML = value;
+                    }
                 }
             });
         });
