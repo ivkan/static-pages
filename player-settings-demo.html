@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDP Player Settings - Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f7;
+            padding: 20px;
+        }
+
+        .settings-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1d1d1f;
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 30px 0 15px;
+            color: #1d1d1f;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 51px;
+            height: 31px;
+            background-color: #e9e9ea;
+            border-radius: 100px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .toggle-switch.active {
+            background-color: #007aff;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 27px;
+            height: 27px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(20px);
+        }
+
+        .toggle-label {
+            font-size: 16px;
+            color: #1d1d1f;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            color: #6e6e73;
+            margin-bottom: 8px;
+        }
+
+        select, input[type="number"], input[type="text"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d2d2d7;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #1d1d1f;
+            background: white;
+            transition: border-color 0.2s;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #007aff;
+        }
+
+        .mode-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #d2d2d7;
+            padding-bottom: 0;
+        }
+
+        .mode-tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            font-size: 14px;
+            font-weight: 500;
+            color: #86868b;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            bottom: -1px;
+        }
+
+        .mode-tab:hover {
+            color: #1d1d1f;
+        }
+
+        .mode-tab.active {
+            color: #007aff;
+            border-bottom-color: #007aff;
+            font-weight: 600;
+        }
+
+        .mode-tab .radio-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #d2d2d7;
+            border-radius: 50%;
+            margin-right: 8px;
+            transition: all 0.2s;
+        }
+
+        .mode-tab.active .radio-indicator {
+            border-color: #007aff;
+            background: #007aff;
+            box-shadow: inset 0 0 0 2px white;
+        }
+
+        .mode-content {
+            display: none;
+            padding: 20px 0;
+        }
+
+        .mode-content.active {
+            display: block;
+        }
+
+        .device-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-top: 20px;
+        }
+
+        .device-column h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #1d1d1f;
+        }
+
+        .offset-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .input-with-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .input-with-label span {
+            font-size: 14px;
+            color: #6e6e73;
+            min-width: 20px;
+        }
+
+        .input-with-label input {
+            width: auto;
+            flex: 1;
+        }
+
+        .preview-section {
+            background: #f5f5f7;
+            border-radius: 12px;
+            padding: 30px;
+            margin-top: 30px;
+        }
+
+        .preview-devices {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .preview-device {
+            text-align: center;
+        }
+
+        .mobile-preview {
+            width: 180px;
+            height: 360px;
+            background: white;
+            border: 12px solid #1d1d1f;
+            border-radius: 30px;
+            position: relative;
+            margin: 0 auto;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .mobile-preview::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 5px;
+            background: #1d1d1f;
+            border-radius: 10px;
+        }
+
+        .desktop-preview {
+            width: 400px;
+            height: 280px;
+            background: white;
+            border: 8px solid #1d1d1f;
+            border-radius: 12px;
+            position: relative;
+            margin: 0 auto;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .desktop-preview::after {
+            content: '';
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 4px;
+            background: #d2d2d7;
+            border-radius: 2px;
+        }
+
+        .preview-content {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            padding: 20px;
+            position: relative;
+        }
+
+        .preview-pdp-page {
+            font-size: 10px;
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-weight: 500;
+            opacity: 0.5;
+        }
+
+        .preview-player {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            color: white;
+            font-weight: 500;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .mobile-preview .preview-player {
+            width: 50px;
+            height: 40px;
+        }
+
+        .desktop-preview .preview-player {
+            width: 70px;
+            height: 55px;
+        }
+
+        .preview-device-label {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #6e6e73;
+            font-weight: 500;
+        }
+
+        .json-output {
+            background: #1d1d1f;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        .info-box {
+            background: #e8f4f8;
+            border-left: 4px solid #007aff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 14px;
+            color: #1d1d1f;
+            line-height: 1.6;
+        }
+
+        .info-box strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #007aff;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #86868b;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .device-columns {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .preview-devices {
+                flex-direction: column;
+                gap: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="settings-container">
+        <h1>PDP Player Positioning Settings</h1>
+
+        <!-- Enable Player -->
+        <div class="section">
+            <div class="toggle-group">
+                <div class="toggle-switch active" id="enableToggle"></div>
+                <span class="toggle-label">Enable player</span>
+            </div>
+        </div>
+
+        <!-- Delay -->
+        <div class="section">
+            <div class="form-group">
+                <label for="delay">Delay</label>
+                <select id="delay">
+                    <option value="0">Immediately</option>
+                    <option value="3">3 seconds</option>
+                    <option value="5">5 seconds</option>
+                    <option value="10" selected>10 seconds</option>
+                    <option value="15">15 seconds</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Mode Selection -->
+        <h2>Positioning Mode</h2>
+        <p style="font-size: 14px; color: #86868b; margin-bottom: 15px; font-style: italic;">
+            ⚠️ Select one positioning mode. Only one mode can be active at a time.
+        </p>
+        <div class="mode-tabs">
+            <button class="mode-tab active" data-mode="fixed">
+                <span class="radio-indicator"></span>
+                Fixed (Corner)
+            </button>
+            <button class="mode-tab" data-mode="relative">
+                <span class="radio-indicator"></span>
+                Inline (Below Element)
+            </button>
+            <button class="mode-tab" data-mode="gallery">
+                <span class="radio-indicator"></span>
+                Gallery (Inside Gallery)
+            </button>
+        </div>
+
+        <!-- Fixed Mode Settings -->
+        <div class="mode-content active" id="fixed-mode">
+            <div class="device-columns">
+                <!-- Mobile Settings -->
+                <div class="device-column">
+                    <h3>Mobile</h3>
+                    <div class="form-group">
+                        <label for="mobile-size">Size</label>
+                        <select id="mobile-size">
+                            <option value="small" selected>Small</option>
+                            <option value="medium">Medium</option>
+                            <option value="large">Large</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="mobile-location">Location</label>
+                        <select id="mobile-location">
+                            <option value="bottom-left" selected>Bottom left</option>
+                            <option value="bottom-right">Bottom right</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Space from corner (px)</label>
+                        <div class="offset-inputs">
+                            <div class="input-with-label">
+                                <span>W:</span>
+                                <input type="number" id="mobile-x" value="30" min="0" max="500">
+                            </div>
+                            <div class="input-with-label">
+                                <span>H:</span>
+                                <input type="number" id="mobile-y" value="230" min="0" max="500">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Desktop Settings -->
+                <div class="device-column">
+                    <h3>Desktop</h3>
+                    <div class="form-group">
+                        <label for="desktop-size">Size</label>
+                        <select id="desktop-size">
+                            <option value="small" selected>Small</option>
+                            <option value="medium">Medium</option>
+                            <option value="large">Large</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="desktop-location">Location</label>
+                        <select id="desktop-location">
+                            <option value="bottom-left" selected>Bottom left</option>
+                            <option value="bottom-right">Bottom right</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Space from corner (px)</label>
+                        <div class="offset-inputs">
+                            <div class="input-with-label">
+                                <span>W:</span>
+                                <input type="number" id="desktop-x" value="50" min="0" max="500">
+                            </div>
+                            <div class="input-with-label">
+                                <span>H:</span>
+                                <input type="number" id="desktop-y" value="20" min="0" max="500">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Relative Mode Settings -->
+        <div class="mode-content" id="relative-mode">
+            <div class="info-box">
+                <strong>Inline Positioning</strong>
+                The player will be inserted inline at a specific location on the page, automatically adjusting to the page width.
+            </div>
+
+            <div class="device-columns">
+                <div class="device-column">
+                    <h3>Desktop</h3>
+                    <div class="form-group">
+                        <label for="relative-desktop-selector">Target Element (CSS Selector)</label>
+                        <input type="text" id="relative-desktop-selector" value=".product-single__media-group" placeholder=".product-gallery">
+                        <p class="help-text">CSS selector for the element to position relative to</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="relative-desktop-position">Insert Position</label>
+                        <select id="relative-desktop-position">
+                            <option value="before">Before element</option>
+                            <option value="after" selected>After element</option>
+                            <option value="prepend">Inside (first child)</option>
+                            <option value="append">Inside (last child)</option>
+                        </select>
+                        <p class="help-text">"After" places the player below the gallery</p>
+                    </div>
+                </div>
+
+                <div class="device-column">
+                    <h3>Mobile</h3>
+                    <div class="form-group">
+                        <label for="relative-mobile-selector">Target Element (CSS Selector)</label>
+                        <input type="text" id="relative-mobile-selector" value=".product-single__media-group" placeholder=".mobile-product-gallery">
+                        <p class="help-text">CSS selector for the element to position relative to</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="relative-mobile-position">Insert Position</label>
+                        <select id="relative-mobile-position">
+                            <option value="before">Before element</option>
+                            <option value="after" selected>After element</option>
+                            <option value="prepend">Inside (first child)</option>
+                            <option value="append">Inside (last child)</option>
+                        </select>
+                        <p class="help-text">"After" places the player below the gallery</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gallery Mode Settings -->
+        <div class="mode-content" id="gallery-mode">
+            <div class="info-box">
+                <strong>Gallery Integration</strong>
+                The player will be inserted as a gallery item with proper wrapper elements and classes to match your gallery structure.
+            </div>
+
+            <div class="device-columns">
+                <div class="device-column">
+                    <h3>Desktop</h3>
+                    <div class="form-group">
+                        <label for="gallery-desktop-selector">Gallery Container (CSS Selector)</label>
+                        <input type="text" id="gallery-desktop-selector" value=".media-gallery__grid" placeholder=".product-gallery-grid">
+                        <p class="help-text">The main gallery container element</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="gallery-desktop-position">Insert Position</label>
+                        <select id="gallery-desktop-position">
+                            <option value="prepend">Beginning of gallery</option>
+                            <option value="append" selected>End of gallery</option>
+                        </select>
+                        <p class="help-text">Where to place the player in the gallery</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="gallery-desktop-tag">Wrapper Tag</label>
+                        <input type="text" id="gallery-desktop-tag" value="li" placeholder="li or div">
+                        <p class="help-text">HTML tag for the gallery item wrapper</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="gallery-desktop-classes">Wrapper Classes</label>
+                        <input type="text" id="gallery-desktop-classes" value="product-media-container constrain-height media-fit" placeholder="gallery-item">
+                        <p class="help-text">Space-separated CSS classes for the wrapper</p>
+                    </div>
+                </div>
+
+                <div class="device-column">
+                    <h3>Mobile</h3>
+                    <div class="form-group">
+                        <label for="gallery-mobile-selector">Gallery Container (CSS Selector)</label>
+                        <input type="text" id="gallery-mobile-selector" value=".slideshow-slides" placeholder=".mobile-gallery">
+                        <p class="help-text">The main gallery container element</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="gallery-mobile-position">Insert Position</label>
+                        <select id="gallery-mobile-position">
+                            <option value="prepend">Beginning of gallery</option>
+                            <option value="append" selected>End of gallery</option>
+                        </select>
+                        <p class="help-text">Where to place the player in the gallery</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="gallery-mobile-tag">Wrapper Tag</label>
+                        <input type="text" id="gallery-mobile-tag" value="slideshow-slide" placeholder="div">
+                        <p class="help-text">HTML tag for the gallery item wrapper</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="gallery-mobile-classes">Wrapper Classes</label>
+                        <input type="text" id="gallery-mobile-classes" value="product-media-container constrain-height media-fit" placeholder="mobile-gallery-item">
+                        <p class="help-text">Space-separated CSS classes for the wrapper</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview (only for Fixed mode) -->
+        <div class="preview-section" id="preview-section">
+            <h2>Preview</h2>
+            <p style="font-size: 14px; color: #86868b; margin-bottom: 15px;">
+                Visual preview showing player position for Fixed (Corner) mode.
+            </p>
+            <div class="preview-devices">
+                <div class="preview-device">
+                    <div class="mobile-preview">
+                        <div class="preview-content">
+                            <div class="preview-pdp-page">PDP page</div>
+                            <div class="preview-player" id="mobile-player-preview">Player</div>
+                        </div>
+                    </div>
+                    <div class="preview-device-label">Mobile</div>
+                </div>
+                <div class="preview-device">
+                    <div class="desktop-preview">
+                        <div class="preview-content">
+                            <div class="preview-pdp-page">PDP PAGE</div>
+                            <div class="preview-player" id="desktop-player-preview">Player</div>
+                        </div>
+                    </div>
+                    <div class="preview-device-label">Desktop</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- JSON Output (hidden for now) -->
+        <div style="display: none;">
+            <h2>API Configuration (JSON)</h2>
+            <p style="font-size: 14px; color: #86868b; margin-top: -10px; margin-bottom: 15px;">
+                The <code style="background: #f5f5f7; padding: 2px 6px; border-radius: 4px;">mode</code> field determines which positioning system is active.
+                Copy this JSON and use it in your API settings endpoint.
+            </p>
+            <div class="json-output" id="json-output"></div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        const state = {
+            enabled: true,
+            delay: 10,
+            mode: 'fixed',
+            mobile: {
+                size: 'small',
+                location: 'bottom-left',
+                x: 30,
+                y: 230
+            },
+            desktop: {
+                size: 'small',
+                location: 'bottom-left',
+                x: 50,
+                y: 20
+            },
+            placement: null
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            setupEventListeners();
+            updatePreview();
+            updateJSON();
+        });
+
+        function setupEventListeners() {
+            // Enable toggle
+            document.getElementById('enableToggle').addEventListener('click', function() {
+                this.classList.toggle('active');
+                state.enabled = this.classList.contains('active');
+                updateJSON();
+            });
+
+            // Delay
+            document.getElementById('delay').addEventListener('change', (e) => {
+                state.delay = parseInt(e.target.value);
+                updateJSON();
+            });
+
+            // Mode tabs
+            document.querySelectorAll('.mode-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const mode = tab.dataset.mode;
+                    switchMode(mode);
+                });
+            });
+
+            // Fixed mode inputs
+            ['mobile', 'desktop'].forEach(device => {
+                ['size', 'location', 'x', 'y'].forEach(prop => {
+                    const input = document.getElementById(`${device}-${prop}`);
+                    if (input) {
+                        input.addEventListener('change', () => {
+                            if (prop === 'x' || prop === 'y') {
+                                state[device][prop] = parseInt(input.value);
+                            } else {
+                                state[device][prop] = input.value;
+                            }
+                            updatePreview();
+                            updateJSON();
+                        });
+                    }
+                });
+            });
+
+            // Relative mode inputs
+            ['desktop', 'mobile'].forEach(device => {
+                ['selector', 'position'].forEach(prop => {
+                    const input = document.getElementById(`relative-${device}-${prop}`);
+                    if (input) {
+                        input.addEventListener('input', updateJSON);
+                    }
+                });
+            });
+
+            // Gallery mode inputs
+            ['desktop', 'mobile'].forEach(device => {
+                ['selector', 'position', 'tag', 'classes'].forEach(prop => {
+                    const input = document.getElementById(`gallery-${device}-${prop}`);
+                    if (input) {
+                        input.addEventListener('input', updateJSON);
+                    }
+                });
+            });
+        }
+
+        function switchMode(mode) {
+            state.mode = mode;
+
+            // Update tabs
+            document.querySelectorAll('.mode-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.mode === mode);
+            });
+
+            // Update content
+            document.querySelectorAll('.mode-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${mode}-mode`).classList.add('active');
+
+            // Show/hide preview section (only for fixed mode)
+            const previewSection = document.getElementById('preview-section');
+            if (mode === 'fixed') {
+                previewSection.style.display = 'block';
+                updatePreview();
+            } else {
+                previewSection.style.display = 'none';
+            }
+
+            updateJSON();
+        }
+
+        function updatePreview() {
+            const mobilePlayer = document.getElementById('mobile-player-preview');
+            const desktopPlayer = document.getElementById('desktop-player-preview');
+
+            if (state.mode === 'fixed') {
+                // Update mobile player position
+                const mobilePos = calculatePosition(state.mobile, true);
+                mobilePlayer.style.bottom = mobilePos.y + 'px';
+                mobilePlayer.style[mobilePos.x === 'left' ? 'left' : 'right'] = mobilePos.offset + 'px';
+                mobilePlayer.style[mobilePos.x === 'left' ? 'right' : 'left'] = 'auto';
+
+                // Update desktop player position
+                const desktopPos = calculatePosition(state.desktop, false);
+                desktopPlayer.style.bottom = desktopPos.y + 'px';
+                desktopPlayer.style[desktopPos.x === 'left' ? 'left' : 'right'] = desktopPos.offset + 'px';
+                desktopPlayer.style[desktopPos.x === 'left' ? 'right' : 'left'] = 'auto';
+            } else {
+                // For relative and gallery modes, center the player as an example
+                mobilePlayer.style.bottom = 'auto';
+                mobilePlayer.style.left = '50%';
+                mobilePlayer.style.top = '50%';
+                mobilePlayer.style.transform = 'translate(-50%, -50%)';
+
+                desktopPlayer.style.bottom = 'auto';
+                desktopPlayer.style.left = '50%';
+                desktopPlayer.style.top = '50%';
+                desktopPlayer.style.transform = 'translate(-50%, -50%)';
+            }
+        }
+
+        function calculatePosition(config, isMobile) {
+            const scale = isMobile ? 0.15 : 0.25;
+            return {
+                x: config.location.includes('left') ? 'left' : 'right',
+                offset: config.x * scale,
+                y: config.y * scale
+            };
+        }
+
+        function updateJSON() {
+            const config = {
+                mode: state.mode,
+                on: state.enabled,
+                start_delay: state.delay,
+                mobile: {
+                    size: state.mobile.size,
+                    location: state.mobile.location,
+                    x: state.mobile.x,
+                    y: state.mobile.y
+                },
+                desktop: {
+                    size: state.desktop.size,
+                    location: state.desktop.location,
+                    x: state.desktop.x,
+                    y: state.desktop.y
+                }
+            };
+
+            // Add placement config for relative and gallery modes
+            if (state.mode === 'relative') {
+                config.placement = {
+                    desktopSelector: document.getElementById('relative-desktop-selector').value,
+                    mobileSelector: document.getElementById('relative-mobile-selector').value,
+                    insertPosition: document.getElementById('relative-desktop-position').value
+                };
+            } else if (state.mode === 'gallery') {
+                config.placement = {
+                    desktopSelector: document.getElementById('gallery-desktop-selector').value,
+                    mobileSelector: document.getElementById('gallery-mobile-selector').value,
+                    insertPosition: document.getElementById('gallery-desktop-position').value,
+                    desktopItemTag: document.getElementById('gallery-desktop-tag').value,
+                    mobileItemTag: document.getElementById('gallery-mobile-tag').value,
+                    desktopItemClasses: document.getElementById('gallery-desktop-classes').value,
+                    mobileItemClasses: document.getElementById('gallery-mobile-classes').value
+                };
+            }
+
+            document.getElementById('json-output').textContent = JSON.stringify(config, null, 2);
+        }
+    </script>
+</body>
+</html>
