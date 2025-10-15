@@ -365,6 +365,34 @@
             font-style: italic;
         }
 
+        .custom-solutions-group {
+            background: #f9f9fb;
+            border: 2px solid #e5e5e7;
+            border-radius: 12px;
+            padding: 20px;
+            margin-left: 20px;
+            position: relative;
+        }
+
+        .custom-solutions-label {
+            position: absolute;
+            top: -12px;
+            left: 15px;
+            background: white;
+            padding: 0 10px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #86868b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .custom-solutions-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 0;
+        }
+
         @media (max-width: 768px) {
             .device-columns {
                 grid-template-columns: 1fr;
@@ -374,6 +402,11 @@
             .preview-devices {
                 flex-direction: column;
                 gap: 30px;
+            }
+
+            .custom-solutions-group {
+                margin-left: 0;
+                margin-top: 20px;
             }
         }
     </style>
@@ -407,21 +440,26 @@
         <!-- Mode Selection -->
         <h2>Positioning Mode</h2>
         <p style="font-size: 14px; color: #86868b; margin-bottom: 15px; font-style: italic;">
-            ⚠️ Select one positioning mode. Only one mode can be active at a time.
+            ⚠️ Select position in mode.
         </p>
         <div class="mode-tabs">
             <button class="mode-tab active" data-mode="fixed">
                 <span class="radio-indicator"></span>
-                Fixed (Corner)
+                Fixed (Overlay)
             </button>
-            <button class="mode-tab" data-mode="relative">
-                <span class="radio-indicator"></span>
-                Relative (Near Element)
-            </button>
-            <button class="mode-tab" data-mode="gallery">
-                <span class="radio-indicator"></span>
-                Gallery (Inside Gallery)
-            </button>
+            <div class="custom-solutions-group">
+                <div class="custom-solutions-label">Custom Solutions</div>
+                <div class="custom-solutions-tabs">
+                    <button class="mode-tab" data-mode="relative">
+                        <span class="radio-indicator"></span>
+                        Relative
+                    </button>
+                    <button class="mode-tab" data-mode="gallery">
+                        <span class="radio-indicator"></span>
+                        Gallery
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Fixed Mode Settings -->
@@ -504,15 +542,15 @@
 
             <div class="device-columns">
                 <div class="device-column">
-                    <h3>Desktop</h3>
+                    <h3>Mobile</h3>
                     <div class="form-group">
-                        <label for="relative-desktop-selector">Target Element (CSS Selector)</label>
-                        <input type="text" id="relative-desktop-selector" value=".product-single__media-group" placeholder=".product-gallery">
+                        <label for="relative-mobile-selector">Target Element (CSS Selector)</label>
+                        <input type="text" id="relative-mobile-selector" value=".product-single__media-group" placeholder=".mobile-product-gallery">
                         <p class="help-text">CSS selector for the element to position relative to</p>
                     </div>
                     <div class="form-group">
-                        <label for="relative-desktop-position">Insert Position</label>
-                        <select id="relative-desktop-position">
+                        <label for="relative-mobile-position">Insert Position</label>
+                        <select id="relative-mobile-position">
                             <option value="before">Before element</option>
                             <option value="after" selected>After element</option>
                             <option value="prepend">Inside (first child)</option>
@@ -523,15 +561,15 @@
                 </div>
 
                 <div class="device-column">
-                    <h3>Mobile</h3>
+                    <h3>Desktop</h3>
                     <div class="form-group">
-                        <label for="relative-mobile-selector">Target Element (CSS Selector)</label>
-                        <input type="text" id="relative-mobile-selector" value=".product-single__media-group" placeholder=".mobile-product-gallery">
+                        <label for="relative-desktop-selector">Target Element (CSS Selector)</label>
+                        <input type="text" id="relative-desktop-selector" value=".product-single__media-group" placeholder=".product-gallery">
                         <p class="help-text">CSS selector for the element to position relative to</p>
                     </div>
                     <div class="form-group">
-                        <label for="relative-mobile-position">Insert Position</label>
-                        <select id="relative-mobile-position">
+                        <label for="relative-desktop-position">Insert Position</label>
+                        <select id="relative-desktop-position">
                             <option value="before">Before element</option>
                             <option value="after" selected>After element</option>
                             <option value="prepend">Inside (first child)</option>
@@ -551,33 +589,6 @@
             </div>
 
             <div class="device-columns">
-                <div class="device-column">
-                    <h3>Desktop</h3>
-                    <div class="form-group">
-                        <label for="gallery-desktop-selector">Gallery Container (CSS Selector)</label>
-                        <input type="text" id="gallery-desktop-selector" value=".media-gallery__grid" placeholder=".product-gallery-grid">
-                        <p class="help-text">The main gallery container element</p>
-                    </div>
-                    <div class="form-group">
-                        <label for="gallery-desktop-position">Insert Position</label>
-                        <select id="gallery-desktop-position">
-                            <option value="prepend">Beginning of gallery</option>
-                            <option value="append" selected>End of gallery</option>
-                        </select>
-                        <p class="help-text">Where to place the player in the gallery</p>
-                    </div>
-                    <div class="form-group">
-                        <label for="gallery-desktop-tag">Wrapper Tag</label>
-                        <input type="text" id="gallery-desktop-tag" value="li" placeholder="li or div">
-                        <p class="help-text">HTML tag for the gallery item wrapper</p>
-                    </div>
-                    <div class="form-group">
-                        <label for="gallery-desktop-classes">Wrapper Classes</label>
-                        <input type="text" id="gallery-desktop-classes" value="product-media-container constrain-height media-fit" placeholder="gallery-item">
-                        <p class="help-text">Space-separated CSS classes for the wrapper</p>
-                    </div>
-                </div>
-
                 <div class="device-column">
                     <h3>Mobile</h3>
                     <div class="form-group">
@@ -601,6 +612,33 @@
                     <div class="form-group">
                         <label for="gallery-mobile-classes">Wrapper Classes</label>
                         <input type="text" id="gallery-mobile-classes" value="product-media-container constrain-height media-fit" placeholder="mobile-gallery-item">
+                        <p class="help-text">Space-separated CSS classes for the wrapper</p>
+                    </div>
+                </div>
+
+                <div class="device-column">
+                    <h3>Desktop</h3>
+                    <div class="form-group">
+                        <label for="gallery-desktop-selector">Gallery Container (CSS Selector)</label>
+                        <input type="text" id="gallery-desktop-selector" value=".media-gallery__grid" placeholder=".product-gallery-grid">
+                        <p class="help-text">The main gallery container element</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="gallery-desktop-position">Insert Position</label>
+                        <select id="gallery-desktop-position">
+                            <option value="prepend">Beginning of gallery</option>
+                            <option value="append" selected>End of gallery</option>
+                        </select>
+                        <p class="help-text">Where to place the player in the gallery</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="gallery-desktop-tag">Wrapper Tag</label>
+                        <input type="text" id="gallery-desktop-tag" value="li" placeholder="li or div">
+                        <p class="help-text">HTML tag for the gallery item wrapper</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="gallery-desktop-classes">Wrapper Classes</label>
+                        <input type="text" id="gallery-desktop-classes" value="product-media-container constrain-height media-fit" placeholder="gallery-item">
                         <p class="help-text">Space-separated CSS classes for the wrapper</p>
                     </div>
                 </div>
