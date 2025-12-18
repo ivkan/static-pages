@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Глоссарий SEO-показателей</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-light: #EEF2FF;
+            --text-main: #1F2937;
+            --text-secondary: #6B7280;
+            --bg-body: #F3F4F6;
+            --bg-card: #FFFFFF;
+            --border: #E5E7EB;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background-color: var(--bg-card);
+            padding: 24px 32px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+            border-bottom: 4px solid var(--primary);
+        }
+
+        .header h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 24px;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .term-card {
+            background-color: var(--bg-card);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .term-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .term-name {
+            font-family: 'Outfit', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .term-translation {
+            margin-left: 12px;
+            padding: 4px 10px;
+            background: var(--primary-light);
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .term-description {
+            color: var(--text-main);
+            margin-bottom: 12px;
+        }
+
+        .term-example {
+            background: #F9FAFB;
+            border-left: 3px solid var(--primary);
+            padding: 12px 16px;
+            border-radius: 0 8px 8px 0;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .term-example strong {
+            color: var(--text-main);
+        }
+
+        .formula {
+            font-family: monospace;
+            background: var(--primary-light);
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: inline-block;
+            margin: 8px 0;
+            font-size: 14px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 24px;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header class="header">
+            <h1>Глоссарий SEO-показателей</h1>
+            <p>Простое объяснение метрик из отчёта</p>
+        </header>
+
+        <div class="term-card">
+            <div class="term-header">
+                <span class="term-name">Clicks</span>
+                <span class="term-translation">Клики</span>
+            </div>
+            <p class="term-description">
+                Количество раз, когда пользователи нажали на ссылку вашего сайта в результатах поиска и перешли на сайт.
+            </p>
+            <div class="term-example">
+                <strong>Пример:</strong> Если 85 человек кликнули на ваш сайт в поиске Google за неделю — это 85 кликов.
+            </div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-header">
+                <span class="term-name">Impressions</span>
+                <span class="term-translation">Показы</span>
+            </div>
+            <p class="term-description">
+                Количество раз, когда ваш сайт появился в результатах поиска. Пользователь не обязательно кликнул — достаточно того, что ссылка была показана.
+            </p>
+            <div class="term-example">
+                <strong>Пример:</strong> 15,742 показов означает, что ваш сайт появился в результатах поиска почти 16 тысяч раз за неделю.
+            </div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-header">
+                <span class="term-name">CTR</span>
+                <span class="term-translation">Кликабельность</span>
+            </div>
+            <p class="term-description">
+                Click-Through Rate — процент пользователей, которые кликнули на ваш сайт после того, как увидели его в поиске.
+            </p>
+            <div class="formula">CTR = Клики ÷ Показы × 100%</div>
+            <div class="term-example">
+                <strong>Пример:</strong> 85 кликов ÷ 15,742 показов = 0.54%. Это значит, что из всех, кто увидел ваш сайт в поиске, только 0.54% перешли на него.
+            </div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-header">
+                <span class="term-name">Avg. Position</span>
+                <span class="term-translation">Средняя позиция</span>
+            </div>
+            <p class="term-description">
+                Среднее место вашего сайта в результатах поиска. Чем меньше число — тем лучше (позиция 1 = первое место).
+            </p>
+            <div class="term-example">
+                <strong>Пример:</strong> Позиция 8.33 означает, что в среднем ваш сайт показывается на 8-9 месте в результатах поиска (обычно это конец первой страницы).
+            </div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-header">
+                <span class="term-name">Change / % Impact</span>
+                <span class="term-translation">Изменение</span>
+            </div>
+            <p class="term-description">
+                Разница между текущей и предыдущей неделей. Показывает, как изменились показатели.
+            </p>
+            <div class="term-example">
+                <strong>Пример:</strong> +57.4% по кликам означает, что на этой неделе кликов было на 57.4% больше, чем на прошлой.
+            </div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-header">
+                <span class="term-name">Google vs Bing</span>
+                <span class="term-translation">Сравнение поисковиков</span>
+            </div>
+            <p class="term-description">
+                Google — самый популярный поисковик в мире (~90% рынка). Bing — поисковик Microsoft (~3% рынка). Сравнение показывает эффективность сайта в разных поисковых системах.
+            </p>
+            <div class="term-example">
+                <strong>Почему CTR в Bing выше?</strong> Меньше показов, но более целевая аудитория — больший процент пользователей кликает.
+            </div>
+        </div>
+
+        <a href="seo-2025-12-15.html" class="back-link">← Вернуться к отчёту</a>
+    </div>
+
+    <div class="footer">
+        © 2025 Immerss
+    </div>
+
+</body>
+</html>
