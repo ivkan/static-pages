@@ -1,0 +1,163 @@
+metroplex_name,tier,rate_adjustment,trip_count
+Barcelona, Spain,4,1.076,1546
+RS, Brazil,1,0.819,1430
+Madrid, Spain,4,0.956,1411
+Sao Paulo, Brazil,2,0.759,1075
+Monterrey, Mexico,3,1.008,639
+Buenos Aires, Argentina,2,1.386,479
+Palma de Mallorca, Spain,4,1.162,475
+Dallas, TX,2,0.682,470
+Prague, Czech Republic,4,0.638,466
+Mexico City, Mexico,3,1.394,453
+London, United Kingdom,4,1.345,437
+Porto Alegre, Brazil,1,1.164,434
+Bilbao, Spain,4,0.992,432
+Warsaw, Poland,4,0.793,383
+Frankfurt, Germany,4,1.116,346
+Birmingham, UK,4,1.000,283
+Santa Fe, Argentina,2,1.579,263
+Belo Horizonte, Brazil,2,0.715,201
+Milan, Italy,4,1.372,187
+Lisbon, Portugal,4,0.937,187
+Toronto, Canada,4,0.593,178
+Ottawa, Canada,4,0.669,176
+Florianopolis, Brazil,2,0.980,173
+Brussels, Belgium,4,0.885,171
+Joinville, Brazil,2,1.050,169
+Houston, TX,3,0.759,166
+Manchester, UK,4,0.496,160
+Cordoba, Argentina,1,1.580,145
+Skopje, North Macedonia,3,1.295,144
+Portland, OR,3,1.069,143
+Philadelphia, PA,4,0.841,135
+Amsterdam, Netherlands,4,1.286,128
+Osasco, Brazil,2,0.680,122
+Sydney, Australia,5,0.950,120
+Dortmund, Germany,3,1.450,119
+Montreal, Canada,4,1.069,117
+Kansas City, MO,3,0.736,114
+Boston, MA,4,0.988,113
+Melbourne, Australia,5,0.720,112
+Copenhagen, Denmark,5,1.057,103
+Curitiba, Brazil,1,1.249,101
+Krakow, Poland,4,0.821,99
+Guadalajara, Mexico,3,1.382,97
+Culiacan, Mexico,3,1.389,95
+Genoa, Italy,4,1.012,93
+Ribeirao Preto, Brazil,2,1.049,93
+Tbilisi, Georgia,3,1.330,91
+Rio de Janeiro, Brazil,2,0.963,91
+Nashville, TN,3,0.649,84
+Baltimore, MD,3,0.855,81
+New York, NY,4,1.050,80
+San Francisco, CA,5,0.701,78
+Chicago, IL,3,0.884,78
+Brisbane, Australia,5,0.774,78
+Rosario, Argentina,1,1.346,77
+Ankara, Turkey,3,1.564,77
+Denver, CO,3,0.961,74
+Washington, DC,4,1.046,74
+Miami, FL,4,0.976,70
+Detroit, MI,3,0.788,69
+Orlando, FL,3,1.158,64
+San Luis Potosi, Mexico,2,1.167,62
+Athens, Greece,4,0.439,61
+Asuncion, Paraguay,1,1.116,59
+Istanbul, Turkey,4,2.052,57
+Newcastle, Australia,3,0.567,56
+Sao Carlos, Brazil,1,1.015,54
+Marilia, Brazil,1,0.941,53
+Recife, Brazil,1,0.965,52
+Edmondton, Canada,4,0.815,51
+San Diego, CA,3,0.856,51
+Covington, VA,3,0.799,51
+Seattle, WA,4,0.963,51
+Salt Lake City, UT,3,0.953,48
+Sacramento, CA,3,0.916,48
+Barretos, Brazil,1,1.078,48
+Jacksonville, FL,3,0.916,48
+Campinas, Brazil,2,0.932,47
+Calgary, Canada,4,0.716,47
+Rome, Italy,4,1.119,45
+Tijuana, Mexico,3,2.598,44
+Columbus, OH,3,0.806,44
+Atlanta, GA,3,0.759,44
+Londrina, Brazil,2,0.637,42
+Birmingham, AL,3,0.969,42
+New Haven, CT,3,1.166,41
+Santiago, Chile,3,0.768,41
+Bruges, Belgium,4,1.526,40
+Auckland, New Zealand,5,0.775,40
+Porto, Portugal,4,1.047,39
+Durham, NC,3,1.085,39
+Pittsburgh, PA,3,0.992,39
+St. Louis, MO,3,1.035,38
+Winnipeg, ON,3,0.607,36
+Fort Worth, TX,2,0.710,35
+Bauru, Brazil,1,1.497,34
+Austin, TX,3,0.884,34
+San Antonio, TX,3,0.853,34
+Cleveland, OH,3,0.653,34
+Sao Bernardo do Campo, Brazil,2,0.779,33
+Los Angeles, CA,4,0.892,32
+Dubai, UAE,5,0.312,30
+Las Vegas, NV,3,0.929,30
+Cedar Rapids, IA,3,1.254,30
+Cape Town, South Africa,4,1.315,29
+Goiania, Brazil,1,0.926,29
+Stamford, CT,3,1.038,28
+Madison, WI,3,0.860,28
+Charlotte, NC,3,1.104,28
+Glasgow, UK,4,1.479,27
+Mendoza, Argentina,1,1.538,27
+Minneapolis, MN,3,0.840,26
+West Palm Beach, FL,3,1.128,25
+Fresno, CA,3,1.907,24
+Swan Valley, Australia,3,1.400,24
+Juarez, Mexico,3,1.367,24
+Cape Coral, FL,3,0.823,24
+New Orleans, LA,3,1.039,24
+Phoenix, AZ,3,0.981,23
+Hermosillo, Mexico,3,1.603,23
+Uberlandia, Brazil,2,0.711,22
+Zurich, Switzerland,5,1.229,22
+Queretaro, Mexico,3,1.195,22
+Concepcion, Chile,3,1.101,21
+Nuremberg, Germany,4,1.414,21
+Boise, ID,3,1.347,20
+Paris, France,4,1.519,20
+Johannesburg, South Africa,4,0.803,19
+Franca, Brazil,1,1.251,19
+Little Rock, AR,3,1.702,18
+Tampa, FL,3,0.851,18
+Mandurah, Australia,3,1.238,18
+Dayton, OH,3,0.974,18
+Cuiaba, Brazil,1,0.681,17
+Hartford, CT,3,1.037,17
+Sorocaba, Brazil,2,0.798,16
+Aguascalientes, Mexico,2,1.294,16
+Naples, FL,3,0.971,16
+Ft. Lauderdale, FL,3,1.356,15
+Belem, Brazil,1,0.874,15
+Puebla, Mexico,3,0.887,15
+Hanoi, Vietnam,4,0.535,14
+Puerto Montt, Chile,2,1.392,14
+Santo Andre, Brazil,2,0.755,14
+Sofia, Bulgaria,4,4.191,14
+Brasilia, Brazil,2,0.944,14
+Batumi, Georgia,3,0.501,14
+York, ME,3,0.771,13
+Adelaide, Australia,4,0.932,13
+Nice, France,4,1.268,13
+Norfolk, VA,3,1.073,13
+Gold Coast, Australia,4,0.837,12
+Indianapolis, IN,3,0.970,12
+Santa Ana, CA,4,1.120,12
+Belgrade, Serbia,4,0.464,12
+Albuquerque, NM,3,0.943,12
+Shepparton, Australia,3,1.003,12
+Corona, CA,3,0.870,11
+Wollong, Australia,3,1.950,11
+Northern New Jersey,3,0.737,11
+Sao Jose do Rio Preto, Brazil,2,0.890,10
+Mailiao Township, Taiwan,3,0.973,10
