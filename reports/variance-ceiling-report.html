@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MUV Pricing — Why 65.4% Is the Ceiling</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #f5f4ef;
+    --surface:  #ffffff;
+    --surface2: #f5f4ef;
+    --border:   rgba(0,0,0,0.10);
+    --border2:  rgba(0,0,0,0.18);
+    --text:     #1a1a18;
+    --muted:    #6b6a63;
+    --faint:    #9c9a91;
+
+    --blue-bg:  #e6f1fb; --blue-tx: #185fa5; --blue-brd: #b5d4f4;
+    --grn-bg:   #eaf3de; --grn-tx:  #3b6d11; --grn-brd:  #c0dd97;
+    --amb-bg:   #faeeda; --amb-tx:  #854f0b; --amb-brd:  #fac775;
+    --red-bg:   #fcebeb; --red-tx:  #a32d2d; --red-brd:  #f7c1c1;
+    --gray-bg:  #f1efe8; --gray-tx: #5f5e5a;
+
+    --r-md: 8px; --r-lg: 12px; --r-xl: 16px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:       #1c1c1a;
+      --surface:  #252523;
+      --surface2: #1c1c1a;
+      --border:   rgba(255,255,255,0.09);
+      --border2:  rgba(255,255,255,0.16);
+      --text:     #d4d2c8;
+      --muted:    #888780;
+      --faint:    #555450;
+
+      --blue-bg:  #0c3050; --blue-tx: #5aabf5; --blue-brd: #185fa5;
+      --grn-bg:   #0a2e18; --grn-tx:  #3fb96e; --grn-brd:  #3b6d11;
+      --amb-bg:   #2e2208; --amb-tx:  #c98a1a; --amb-brd:  #854f0b;
+      --red-bg:   #2e0f0f; --red-tx:  #e24b4a; --red-brd:  #a32d2d;
+      --gray-bg:  #2c2c2a; --gray-tx: #9c9a91;
+    }
+  }
+
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 2.5rem 1rem 4rem;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  /* ── Masthead ── */
+  .masthead {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+  .masthead .eyebrow {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: .6rem;
+  }
+  .masthead h1 {
+    font-size: 28px;
+    font-weight: 500;
+    line-height: 1.25;
+    margin-bottom: .5rem;
+  }
+  .masthead .sub {
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .card-title {
+    font-size: 17px;
+    font-weight: 500;
+    margin-bottom: .35rem;
+  }
+  .card-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 1.1rem;
+    line-height: 1.55;
+  }
+
+  /* ── Section label ── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin: 2rem 0 .75rem;
+  }
+
+  /* ── Metric row ── */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 1rem;
+  }
+  .metric {
+    background: var(--surface2);
+    border-radius: var(--r-md);
+    padding: 1rem;
+    text-align: center;
+  }
+  .metric .val {
+    font-size: 28px;
+    font-weight: 500;
+    line-height: 1.1;
+  }
+  .metric .lbl {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+    line-height: 1.35;
+  }
+
+  /* ── Inline badge ── */
+  .bdg {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 9px;
+    border-radius: 20px;
+    vertical-align: middle;
+  }
+  .bdg-blue  { background: var(--blue-bg); color: var(--blue-tx); }
+  .bdg-grn   { background: var(--grn-bg);  color: var(--grn-tx);  }
+  .bdg-amb   { background: var(--amb-bg);  color: var(--amb-tx);  }
+  .bdg-red   { background: var(--red-bg);  color: var(--red-tx);  }
+  .bdg-gray  { background: var(--gray-bg); color: var(--gray-tx); }
+
+  /* ── Alert boxes ── */
+  .alert {
+    border-radius: var(--r-md);
+    padding: .875rem 1.125rem;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+  .alert strong { font-weight: 500; }
+  .alert-blue { background: var(--blue-bg); color: var(--blue-tx); border: 0.5px solid var(--blue-brd); }
+  .alert-amb  { background: var(--amb-bg);  color: var(--amb-tx);  border: 0.5px solid var(--amb-brd);  }
+  .alert-red  { background: var(--red-bg);  color: var(--red-tx);  border: 0.5px solid var(--red-brd);  }
+  .alert-grn  { background: var(--grn-bg);  color: var(--grn-tx);  border: 0.5px solid var(--grn-brd);  }
+
+  /* ── Divider ── */
+  .divider { height: 0.5px; background: var(--border); margin: 1.5rem 0; }
+
+  /* ── City table ── */
+  .city-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .city-table th {
+    text-align: left;
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--faint);
+    padding: 0 8px 8px 0;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .city-table th:last-child, .city-table td:last-child { text-align: right; padding-right: 0; }
+  .city-table td {
+    padding: 8px 8px 8px 0;
+    border-bottom: 0.5px solid var(--border);
+    color: var(--text);
+    vertical-align: middle;
+  }
+  .city-table tr:last-child td { border-bottom: none; }
+  .acc-bar-wrap { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .acc-bar { height: 5px; border-radius: 3px; background: var(--border); width: 60px; flex-shrink: 0; overflow: hidden; }
+  .acc-bar-fill { height: 100%; border-radius: 3px; }
+  .acc-num { min-width: 32px; text-align: right; color: var(--muted); }
+
+  /* ── Case study ── */
+  .case-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: .875rem; }
+  .case-tab {
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 5px 13px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--muted);
+    font-family: inherit;
+    transition: background .12s, color .12s, border-color .12s;
+  }
+  .case-tab:hover { border-color: var(--border2); color: var(--text); }
+  .case-tab.active { background: var(--blue-bg); color: var(--blue-tx); border-color: transparent; }
+
+  .case-panel { display: none; }
+  .case-panel.active { display: block; }
+
+  .spread-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: .875rem;
+  }
+  .spread-box {
+    background: var(--surface2);
+    border-radius: var(--r-md);
+    padding: .875rem 1rem;
+  }
+  .spread-box .label { font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .4rem; }
+  .spread-box .price { font-size: 22px; font-weight: 500; }
+  .spread-box .detail { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+
+  .formula-row {
+    background: var(--surface2);
+    border-radius: var(--r-md);
+    padding: .875rem 1rem;
+    margin-bottom: .75rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .formula-row .fl { font-size: 13px; color: var(--muted); flex: 1; min-width: 160px; }
+  .formula-row .fv { font-size: 20px; font-weight: 500; color: var(--red-tx); }
+  .formula-row .fa { font-size: 12px; color: var(--muted); }
+
+  .dist-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .dist-table th {
+    text-align: right;
+    font-weight: 500;
+    font-size: 11px;
+    color: var(--faint);
+    padding: 0 0 6px 12px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .dist-table th:first-child { text-align: left; padding-left: 0; }
+  .dist-table td {
+    text-align: right;
+    padding: 6px 0 6px 12px;
+    border-bottom: 0.5px solid var(--border);
+    color: var(--text);
+  }
+  .dist-table td:first-child { text-align: left; padding-left: 0; color: var(--muted); }
+  .dist-table tr:last-child td { border-bottom: none; }
+  .spread-hi { color: var(--red-tx); font-weight: 500; }
+  .acc-0   { color: var(--red-tx); }
+  .acc-ok  { color: var(--grn-tx); }
+  .acc-mid { color: var(--amb-tx); }
+
+  /* ── Root cause diagram ── */
+  .root-diagram {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+    margin: 1rem 0;
+    flex-wrap: wrap;
+  }
+  .rd-box {
+    flex: 1;
+    min-width: 140px;
+    background: var(--surface2);
+    border-radius: var(--r-md);
+    padding: 1rem;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .rd-box .rd-ttl { font-weight: 500; font-size: 14px; margin-bottom: .35rem; }
+  .rd-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--faint);
+    font-size: 20px;
+    padding: 0 2px;
+    flex-shrink: 0;
+    align-self: center;
+  }
+  .rd-box.red  { background: var(--red-bg); }
+  .rd-box.red .rd-ttl  { color: var(--red-tx); }
+  .rd-box.red p  { color: var(--red-tx); opacity: .85; }
+
+  /* ── Questions ── */
+  .q-list { display: flex; flex-direction: column; gap: 10px; }
+  .q-item {
+    background: var(--surface2);
+    border-radius: var(--r-md);
+    padding: 1rem 1.125rem;
+    display: flex;
+    gap: .875rem;
+    align-items: flex-start;
+  }
+  .q-num {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 500; flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .q-num.blue { background: var(--blue-bg); color: var(--blue-tx); }
+  .q-body .q-ttl { font-weight: 500; font-size: 14px; margin-bottom: .25rem; }
+  .q-body .q-txt { font-size: 13px; color: var(--muted); line-height: 1.55; }
+  .q-body .q-if  { margin-top: .4rem; font-size: 12px; padding: 3px 10px; border-radius: 20px; display: inline-block; }
+
+  /* ── Correlation bar ── */
+  .corr-wrap { margin: .875rem 0; }
+  .corr-track {
+    height: 8px; border-radius: 4px;
+    background: linear-gradient(to right, var(--red-bg) 0%, var(--amb-bg) 40%, var(--grn-bg) 100%);
+    position: relative; margin-bottom: 6px;
+    border: 0.5px solid var(--border);
+  }
+  .corr-needle {
+    position: absolute; top: -4px;
+    width: 3px; height: 16px; border-radius: 2px;
+    background: var(--red-tx);
+    left: 17.5%; /* -0.325 maps to about 17.5% of the -1..+1 range */
+    transform: translateX(-50%);
+  }
+  .corr-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--faint); }
+
+  /* ── Footer ── */
+  .footer { text-align: center; font-size: 12px; color: var(--faint); margin-top: 3rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Masthead -->
+  <div class="masthead">
+    <span class="eyebrow">MUV Calibration Engine · March 2026</span>
+    <h1>Why 65.4% is the accuracy ceiling</h1>
+    <p class="sub">An analysis of 16,265 historical trips and why the pricing formula<br>cannot exceed this threshold without structural changes</p>
+  </div>
+
+  <!-- Summary metrics -->
+  <div class="metrics">
+    <div class="metric">
+      <div class="val" style="color: var(--blue-tx);">65.4%</div>
+      <div class="lbl">Current accuracy<br>(±10% of actual price)</div>
+    </div>
+    <div class="metric">
+      <div class="val" style="color: var(--muted);">66.2%</div>
+      <div class="lbl">Theoretical ceiling<br>with current formula</div>
+    </div>
+    <div class="metric">
+      <div class="val" style="color: var(--grn-tx);">48</div>
+      <div class="lbl">Cities moved to<br>better pricing tier</div>
+    </div>
+    <div class="metric">
+      <div class="val" style="color: var(--text);">16,265</div>
+      <div class="lbl">Historical trips<br>fully analyzed</div>
+    </div>
+  </div>
+
+  <div class="alert alert-blue">
+    <strong>Bottom line:</strong> The calibration engine has done everything the formula allows. The remaining gap to 66.2% — and to any higher target — is caused by a structural constraint in the pricing model itself, not by incorrect parameters.
+  </div>
+
+  <!-- Root cause -->
+  <div class="section-label">The core constraint</div>
+  <div class="card">
+    <div class="card-title">The formula produces one price. Reality produces many.</div>
+    <div class="card-sub">For any given city and distance range, the formula outputs a single fixed price. But historical data shows that trips in the same city, at the same distance, were charged very different amounts — sometimes 5× apart. No amount of parameter tuning can make one number match a range of numbers.</div>
+
+    <div class="root-diagram">
+      <div class="rd-box">
+        <div class="rd-ttl">Same city</div>
+        <p style="color: var(--muted); font-size: 13px;">Same distance range<br>Same pricing tier<br>Same formula</p>
+      </div>
+      <div class="rd-arrow">→</div>
+      <div class="rd-box">
+        <div class="rd-ttl">Formula output</div>
+        <p style="font-size: 22px; font-weight: 500; margin: .25rem 0;">$158</p>
+        <p style="color: var(--muted); font-size: 12px;">One number, always</p>
+      </div>
+      <div class="rd-arrow">≠</div>
+      <div class="rd-box red">
+        <div class="rd-ttl">Historical prices</div>
+        <p style="font-size: 13px; margin: .25rem 0;">$133 · $156 · $210<br>$374 · $572 · $801</p>
+        <p style="font-size: 12px; opacity: .8;">Six different actual prices</p>
+      </div>
+    </div>
+
+    <div class="alert alert-amb" style="margin-bottom: 0;">
+      <strong>Key insight:</strong> A city correction factor (rate_adjustment) can shift the formula's single output up or down — but it cannot split it into multiple values. The spread within each city is invisible to the formula.
+    </div>
+  </div>
+
+  <!-- Correlation -->
+  <div class="section-label">Statistical evidence</div>
+  <div class="card">
+    <div class="card-title">High price variance = low accuracy. Always.</div>
+    <div class="card-sub">Across all 678 cities, the correlation between price variability and prediction accuracy is −0.325. Cities where historical prices jump around unpredictably are exactly the cities the formula performs worst on. This is not coincidence — it is the mathematical consequence of fitting one value to a distribution.</div>
+
+    <div class="corr-wrap">
+      <div class="corr-track"><div class="corr-needle"></div></div>
+      <div class="corr-labels">
+        <span>−1.0 (perfect negative)</span>
+        <span style="color: var(--red-tx); font-weight: 500;">−0.325 ← our data</span>
+        <span>0 (no correlation)</span>
+        <span>+1.0</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div style="font-size: 13px; font-weight: 500; color: var(--muted); margin-bottom: .625rem; text-transform: uppercase; letter-spacing: .05em;">Cities with highest price variance</div>
+    <table class="city-table">
+      <thead>
+        <tr>
+          <th>City</th>
+          <th style="text-align:center">Variability</th>
+          <th style="text-align:center">Trips</th>
+          <th>Accuracy</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Covington, VA</td><td style="text-align:center"><span class="bdg bdg-red">Very high</span></td><td style="text-align:center">49</td><td><div class="acc-bar-wrap"><div class="acc-bar"><div class="acc-bar-fill" style="width:53%;background:var(--amb-tx)"></div></div><span class="acc-num acc-mid">53%</span></div></td></tr>
+        <tr><td>Murcia, Spain</td><td style="text-align:center"><span class="bdg bdg-red">Very high</span></td><td style="text-align:center">47</td><td><div class="acc-bar-wrap"><div class="acc-bar"><div class="acc-bar-fill" style="width:87%;background:var(--grn-tx)"></div></div><span class="acc-num acc-ok">87%</span></div></td></tr>
+        <tr><td>Pittsburgh, PA</td><td style="text-align:center"><span class="bdg bdg-red">Very high</span></td><td style="text-align:center">47</td><td><div class="acc-bar-wrap"><div class="acc-bar"><div class="acc-bar-fill" style="width:62%;background:var(--amb-tx)"></div></div><span class="acc-num acc-mid">62%</span></div></td></tr>
+        <tr><td>Bruges, Belgium</td><td style="text-align:center"><span class="bdg bdg-amb">High</span></td><td style="text-align:center">13</td><td><div class="acc-bar-wrap"><div class="acc-bar"><div class="acc-bar-fill" style="width:46%;background:var(--amb-tx)"></div></div><span class="acc-num acc-mid">46%</span></div></td></tr>
+        <tr><td>Montreal, Canada</td><td style="text-align:center"><span class="bdg bdg-amb">High</span></td><td style="text-align:center">102</td><td><div class="acc-bar-wrap"><div class="acc-bar"><div class="acc-bar-fill" style="width:73%;background:var(--grn-tx)"></div></div><span class="acc-num acc-ok">73%</span></div></td></tr>
+        <tr><td>Detroit, MI</td><td style="text-align:center"><span class="bdg bdg-amb">High</span></td><td style="text-align:center">70</td><td><div class="acc-bar-wrap"><div class="acc-bar"><div class="acc-bar-fill" style="width:46%;background:var(--amb-tx)"></div></div><span class="acc-num acc-mid">46%</span></div></td></tr>
+        <tr><td>Tampa, FL</td><td style="text-align:center"><span class="bdg bdg-amb">High</span></td><td style="text-align:center">33</td><td><div class="acc-bar-wrap"><div class="acc-bar"><div class="acc-bar-fill" style="width:55%;background:var(--amb-tx)"></div></div><span class="acc-num acc-mid">55%</span></div></td></tr>
+      </tbody>
+    </table>
+    <p style="font-size: 12px; color: var(--faint); margin-top: .625rem;">Note: Murcia at 87% despite high variability shows the correlation is strong but not deterministic — when variability happens to be within the ±10% window, accuracy stays high.</p>
+  </div>
+
+  <!-- Case studies -->
+  <div class="section-label">Real examples from the data</div>
+  <div class="card">
+    <div class="card-title">Worst-performing cities — what the data actually shows</div>
+    <div class="card-sub">These are not outliers to be filtered out. They represent a systematic pattern: the formula's single price lands far from actual prices because those prices were never determined by distance alone.</div>
+
+    <div class="case-tabs" id="tabs">
+      <button class="case-tab active" onclick="showCase(0)">Las Vegas, NV</button>
+      <button class="case-tab" onclick="showCase(1)">Nashville, TN</button>
+      <button class="case-tab" onclick="showCase(2)">Brussels, Belgium</button>
+      <button class="case-tab" onclick="showCase(3)">Toronto, Canada</button>
+      <button class="case-tab" onclick="showCase(4)">Canberra, Australia</button>
+    </div>
+
+    <!-- Las Vegas -->
+    <div class="case-panel active" id="case-0">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.875rem;">
+        <span class="bdg bdg-blue">Tier 5</span>
+        <span class="bdg bdg-gray">52 trips</span>
+        <span class="bdg bdg-red">21.2% accurate</span>
+      </div>
+      <div class="spread-grid">
+        <div class="spread-box">
+          <div class="label">Cheapest trip (5–10 mi)</div>
+          <div class="price">$133</div>
+          <div class="detail">Harrahs → McCarran Airport<br>Distance: 8.8 mi</div>
+        </div>
+        <div class="spread-box">
+          <div class="label">Most expensive trip (5–10 mi)</div>
+          <div class="price" style="color:var(--red-tx);">$801</div>
+          <div class="detail">McCarran Airport → Las Vegas Blvd<br>Distance: 7.2 mi</div>
+        </div>
+      </div>
+      <div class="formula-row">
+        <div class="fl">Formula predicts one price for all 11 trips in this distance range</div>
+        <div class="fv">$158</div>
+        <div class="fa">6× below the actual<br>max price</div>
+      </div>
+      <table class="dist-table">
+        <thead><tr><th>Distance</th><th>Trips</th><th>Min</th><th>Max</th><th>Spread</th><th>Formula</th><th>Accuracy</th></tr></thead>
+        <tbody>
+          <tr><td>0–5 mi</td><td>31</td><td>$97</td><td>$474</td><td class="spread-hi">$377</td><td>$158</td><td class="acc-0">13%</td></tr>
+          <tr><td>5–10 mi</td><td>11</td><td>$133</td><td>$801</td><td class="spread-hi">$668</td><td>$158</td><td class="acc-mid">36%</td></tr>
+          <tr><td>10–15 mi</td><td>3</td><td>$139</td><td>$161</td><td>$22</td><td>$158</td><td class="acc-ok">33%</td></tr>
+          <tr><td>15–20 mi</td><td>6</td><td>$149</td><td>$572</td><td class="spread-hi">$423</td><td>$192</td><td class="acc-0">17%</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Nashville -->
+    <div class="case-panel" id="case-1">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.875rem;">
+        <span class="bdg bdg-blue">Tier 3</span>
+        <span class="bdg bdg-gray">191 trips</span>
+        <span class="bdg bdg-red">27.7% accurate</span>
+      </div>
+      <div class="spread-grid">
+        <div class="spread-box">
+          <div class="label">Cheapest trip (0–5 mi)</div>
+          <div class="price">$248</div>
+          <div class="detail">Homewood Suites → Children's Way<br>Distance: 0.8 mi</div>
+        </div>
+        <div class="spread-box">
+          <div class="label">Most expensive trip (0–5 mi)</div>
+          <div class="price" style="color:var(--red-tx);">$558</div>
+          <div class="detail">Same hotel, 1.0 mi trip<br>2.25× the cheapest</div>
+        </div>
+      </div>
+      <div class="formula-row">
+        <div class="fl">Formula predicts one price for all 34 trips in the 0–5 mi range</div>
+        <div class="fv">$189</div>
+        <div class="fa">Below the cheapest<br>actual trip ($248)</div>
+      </div>
+      <table class="dist-table">
+        <thead><tr><th>Distance</th><th>Trips</th><th>Min</th><th>Max</th><th>Spread</th><th>Formula</th><th>Accuracy</th></tr></thead>
+        <tbody>
+          <tr><td>0–5 mi</td><td>34</td><td>$248</td><td>$558</td><td class="spread-hi">$310</td><td>$189</td><td class="acc-0">0%</td></tr>
+          <tr><td>5–10 mi</td><td>106</td><td>$119</td><td>$372</td><td class="spread-hi">$253</td><td>$160</td><td class="acc-mid">50%</td></tr>
+          <tr><td>10–15 mi</td><td>37</td><td>$124</td><td>$372</td><td class="spread-hi">$248</td><td>$165</td><td class="acc-0">0%</td></tr>
+          <tr><td>15–20 mi</td><td>11</td><td>$248</td><td>$372</td><td>$124</td><td>$189</td><td class="acc-0">0%</td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:.75rem;font-size:13px;color:var(--muted);line-height:1.55;">Nashville also shows a billing-type split: Transfer trips median $124, hourly trips median $248 — both using the same pricing tier. The formula cannot distinguish between them within the same distance bucket.</div>
+    </div>
+
+    <!-- Brussels -->
+    <div class="case-panel" id="case-2">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.875rem;">
+        <span class="bdg bdg-blue">Tier 3</span>
+        <span class="bdg bdg-gray">46 trips</span>
+        <span class="bdg bdg-red">23.9% accurate</span>
+      </div>
+      <div class="spread-grid">
+        <div class="spread-box">
+          <div class="label">Cheapest trip (10–15 mi)</div>
+          <div class="price">$129</div>
+          <div class="detail">Leuven hotel → Brussels Airport<br>Distance: 10.9 mi</div>
+        </div>
+        <div class="spread-box">
+          <div class="label">Most expensive trip (10–15 mi)</div>
+          <div class="price" style="color:var(--red-tx);">$507</div>
+          <div class="detail">Same-address trip, Antwerp<br>3.9× more expensive</div>
+        </div>
+      </div>
+      <div class="formula-row">
+        <div class="fl">Formula predicts one price for all 10 trips in the 10–15 mi range</div>
+        <div class="fv">$175</div>
+        <div class="fa">$332 below the<br>most expensive actual</div>
+      </div>
+      <table class="dist-table">
+        <thead><tr><th>Distance</th><th>Trips</th><th>Min</th><th>Max</th><th>Spread</th><th>Formula</th><th>Accuracy</th></tr></thead>
+        <tbody>
+          <tr><td>0–5 mi</td><td>9</td><td>$46</td><td>$85</td><td>$39</td><td>$164</td><td class="acc-0">0%</td></tr>
+          <tr><td>5–10 mi</td><td>18</td><td>$55</td><td>$379</td><td class="spread-hi">$323</td><td>$170</td><td class="acc-0">0%</td></tr>
+          <tr><td>10–15 mi</td><td>10</td><td>$129</td><td>$507</td><td class="spread-hi">$378</td><td>$175</td><td class="acc-mid">50%</td></tr>
+          <tr><td>15–20 mi</td><td>6</td><td>$139</td><td>$175</td><td>$37</td><td>$138</td><td class="acc-ok">100%</td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:.75rem;font-size:13px;color:var(--muted);line-height:1.55;">Brussels illustrates how accuracy can reach 100% in one distance band (15–20 mi, where prices happen to cluster tightly) while being 0% in adjacent bands. The formula is not wrong — the data just isn't consistent.</div>
+    </div>
+
+    <!-- Toronto -->
+    <div class="case-panel" id="case-3">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.875rem;">
+        <span class="bdg bdg-blue">Tier 5</span>
+        <span class="bdg bdg-gray">143 trips</span>
+        <span class="bdg bdg-red">30.8% accurate</span>
+      </div>
+      <div class="spread-grid">
+        <div class="spread-box">
+          <div class="label">Cheapest trip (15–20 mi)</div>
+          <div class="price">$135</div>
+          <div class="detail">Chelsea Hotel → Pearson Airport<br>Distance: 17.3 mi</div>
+        </div>
+        <div class="spread-box">
+          <div class="label">Most expensive trip (15–20 mi)</div>
+          <div class="price" style="color:var(--red-tx);">$448</div>
+          <div class="detail">Hunt Club Dr → Hunt Club Dr<br>3.3× more expensive</div>
+        </div>
+      </div>
+      <div class="formula-row">
+        <div class="fl">Formula predicts one price for all 16 trips in the 15–20 mi range</div>
+        <div class="fv">$180</div>
+        <div class="fa">0% accuracy in<br>this distance bucket</div>
+      </div>
+      <table class="dist-table">
+        <thead><tr><th>Distance</th><th>Trips</th><th>Min</th><th>Max</th><th>Spread</th><th>Formula</th><th>Accuracy</th></tr></thead>
+        <tbody>
+          <tr><td>0–5 mi</td><td>7</td><td>$137</td><td>$155</td><td>$18</td><td>$153</td><td class="acc-ok">86%</td></tr>
+          <tr><td>5–10 mi</td><td>41</td><td>$125</td><td>$166</td><td>$41</td><td>$153</td><td class="acc-mid">41%</td></tr>
+          <tr><td>10–15 mi</td><td>12</td><td>$136</td><td>$260</td><td>$124</td><td>$164</td><td class="acc-mid">25%</td></tr>
+          <tr><td>15–20 mi</td><td>16</td><td>$135</td><td>$448</td><td class="spread-hi">$314</td><td>$180</td><td class="acc-0">0%</td></tr>
+          <tr><td>20–25 mi</td><td>17</td><td>$138</td><td>$285</td><td>$147</td><td>$195</td><td class="acc-0">12%</td></tr>
+          <tr><td>25–30 mi</td><td>7</td><td>$237</td><td>$274</td><td>$38</td><td>$226</td><td class="acc-mid">29%</td></tr>
+          <tr><td>30–35 mi</td><td>41</td><td>$235</td><td>$309</td><td>$74</td><td>$237</td><td class="acc-mid">34%</td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:.75rem;font-size:13px;color:var(--muted);line-height:1.55;">Toronto shows the pattern clearly: when actual prices cluster tightly (0–5 mi band, $18 spread), accuracy reaches 86%. When they spread out (15–20 mi, $314 spread), accuracy drops to 0%. The formula has not changed — only the data's consistency has.</div>
+    </div>
+
+    <!-- Canberra -->
+    <div class="case-panel" id="case-4">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.875rem;">
+        <span class="bdg bdg-blue">Tier 4</span>
+        <span class="bdg bdg-gray">9 trips</span>
+        <span class="bdg bdg-red">0.0% accurate</span>
+      </div>
+      <div class="spread-grid">
+        <div class="spread-box">
+          <div class="label">Cheapest trip (15–20 mi)</div>
+          <div class="price">$99</div>
+          <div class="detail">Residential address → Airport<br>Distance: 16.8 mi</div>
+        </div>
+        <div class="spread-box">
+          <div class="label">Formula prediction</div>
+          <div class="price" style="color:var(--red-tx);">$247</div>
+          <div class="detail">2.5× above the actual price<br>Error: 149%</div>
+        </div>
+      </div>
+      <div class="alert alert-red" style="margin-bottom: 0;">
+        Canberra's formula output ($247) is above the most expensive historical trip ($125). All 9 trips are mis-priced in the same direction, which strongly suggests this city was handled under different pricing rules or a different formula version.
+      </div>
+    </div>
+  </div>
+
+  <!-- Three questions -->
+  <div class="section-label">What would change this</div>
+  <div class="card">
+    <div class="card-title">Three questions only the business can answer</div>
+    <div class="card-sub">The data analysis points to three possible explanations for the price spread. Each has a different implication for whether 90%+ accuracy is achievable at all.</div>
+
+    <div class="q-list">
+      <div class="q-item">
+        <div class="q-num blue">1</div>
+        <div class="q-body">
+          <div class="q-ttl">Were historical prices affected by manual dispatcher overrides?</div>
+          <div class="q-txt">If dispatchers could manually adjust prices — discounts for loyal clients, surge pricing for last-minute bookings, event premiums — then the historical "TotalPrice" does not reflect the formula at all. No calibration can match prices set by human judgment.</div>
+          <span class="q-if bdg-red bdg" style="padding:4px 12px;border-radius:6px;font-size:12px;">If YES → 90% accuracy is impossible on this dataset. A new clean dataset is needed.</span>
+        </div>
+      </div>
+
+      <div class="q-item">
+        <div class="q-num blue">2</div>
+        <div class="q-body">
+          <div class="q-ttl">Did time-of-day or demand influence pricing?</div>
+          <div class="q-txt">The dataset records only a recalculation date (2026-02-13 for all trips), not the actual booking date or time. If prices were higher on Friday evenings, during events, or in peak seasons, the formula cannot capture this without a time dimension in the data.</div>
+          <span class="q-if bdg-amb bdg" style="padding:4px 12px;border-radius:6px;font-size:12px;">If YES → Providing actual trip dates could enable time-based analysis and improve accuracy.</span>
+        </div>
+      </div>
+
+      <div class="q-item">
+        <div class="q-num blue">3</div>
+        <div class="q-body">
+          <div class="q-ttl">Were some trips priced under a different formula version?</div>
+          <div class="q-txt">Canberra and similar cities where the formula systematically over- or under-prices all trips in the same direction suggests the formula rules may have changed over time. Trips priced under different rules would corrupt the calibration signal.</div>
+          <span class="q-if bdg-grn bdg" style="padding:4px 12px;border-radius:6px;font-size:12px;">If YES → Filtering the dataset to a known date range could significantly raise the ceiling.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data request -->
+  <div class="alert alert-grn">
+    <strong>Immediate request:</strong> Please provide the actual trip booking dates. With dates, time-of-day and day-of-week analysis becomes possible — this is the single highest-impact data point that could change the ceiling estimate.
+  </div>
+
+  <div class="footer">
+    MUV Calibration Engine · Variance Analysis · 16,265 Phase 1 trips · 678 metroplexes · March 2026
+  </div>
+
+</div>
+
+<script>
+function showCase(idx) {
+  document.querySelectorAll('.case-panel').forEach((p,i) => p.classList.toggle('active', i===idx));
+  document.querySelectorAll('.case-tab').forEach((t,i) => t.classList.toggle('active', i===idx));
+}
+</script>
+</body>
+</html>

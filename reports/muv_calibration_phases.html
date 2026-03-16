@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MUV Calibration — Phase A & B</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #f5f4ef;
+    color: #1a1a18;
+    padding: 2rem 1rem;
+    min-height: 100vh;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1c1c1a; color: #d4d2c8; }
+    .ph { background: #252523; border-color: #38382e; }
+    .spnl { background: #1c1c1a; }
+    .rc { background: #1c1c1a; }
+    .stab { background: #1c1c1a; border-color: #38382e; color: #888; }
+    .stab:hover:not(.active) { background: #252523; color: #d4d2c8; }
+    .nbtn { border-color: #38382e; color: #888; }
+    .nbtn:hover:not([disabled]) { background: #1c1c1a; color: #d4d2c8; }
+    .cpill { background: #1c1c1a; border-color: #38382e; color: #666; }
+    .cline { background: #38382e; }
+    .ph-a .stab.active { background: #0c3050; color: #5aabf5; border-color: transparent; }
+    .ph-b .stab.active { background: #0a2e18; color: #3fb96e; border-color: transparent; }
+    .ph-a .bdg { background: #0c3050; color: #5aabf5; }
+    .ph-b .bdg { background: #0a2e18; color: #3fb96e; }
+    .ph-a .insght { background: #0c3050; color: #5aabf5; }
+    .ph-b .insght { background: #0a2e18; color: #3fb96e; }
+    .ph-a .lpn { background: #0c3050; color: #5aabf5; }
+    .ph-b .lpn { background: #0a2e18; color: #3fb96e; }
+    .warn-box { background: #2e2208; color: #c98a1a; }
+    .spnl-txt { color: #888; }
+    .ph-sub { color: #888; }
+    .rl { color: #666; }
+    .sctr { color: #555; }
+    .meta-lbl { color: #888; }
+  }
+
+  .wrap { max-width: 680px; margin: 0 auto; }
+
+  .ph {
+    background: #fff;
+    border: 0.5px solid #dddbd0;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .bdg {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 6px;
+    margin-bottom: .75rem;
+    letter-spacing: .04em;
+  }
+  .ph-a .bdg { background: #e6f1fb; color: #185fa5; }
+  .ph-b .bdg { background: #eaf3de; color: #3b6d11; }
+  .ph-ttl { font-size: 20px; font-weight: 500; margin: 0 0 .35rem; }
+  .ph-sub { font-size: 14px; color: #6b6a63; margin: 0 0 1.1rem; line-height: 1.65; }
+
+  .stabs { display: flex; gap: 6px; margin-bottom: .875rem; flex-wrap: wrap; }
+  .stab {
+    background: #f5f4ef;
+    border: 0.5px solid #dddbd0;
+    border-radius: 6px;
+    padding: 5px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    color: #6b6a63;
+    font-family: inherit;
+    transition: background .12s, color .12s;
+  }
+  .stab:hover:not(.active) { border-color: #b8b6ad; color: #1a1a18; }
+  .ph-a .stab.active { background: #e6f1fb; color: #185fa5; border-color: transparent; }
+  .ph-b .stab.active { background: #eaf3de; color: #3b6d11; border-color: transparent; }
+
+  .spnl {
+    background: #f5f4ef;
+    border-radius: 8px;
+    padding: 1.125rem 1.375rem;
+    min-height: 148px;
+  }
+  .spnl-ttl { font-size: 16px; font-weight: 500; margin: 0 0 .5rem; }
+  .spnl-txt { font-size: 14px; color: #6b6a63; line-height: 1.7; margin: 0 0 .75rem; }
+  .insght-wrap { position: relative; display: inline-block; }
+  .insght {
+    display: inline-block;
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    cursor: help;
+  }
+  .insght::after { content: ' ?'; font-weight: 600; opacity: .5; }
+  .ph-a .insght { background: #e6f1fb; color: #185fa5; }
+  .ph-b .insght { background: #eaf3de; color: #3b6d11; }
+  .ttip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    min-width: 260px;
+    background: #1a1a18;
+    color: #e8e6dc;
+    font-size: 12px;
+    line-height: 1.6;
+    padding: 10px 14px;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.2);
+    z-index: 10;
+  }
+  .ttip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 24px;
+    border: 6px solid transparent;
+    border-top-color: #1a1a18;
+  }
+  .insght-wrap.open .ttip { display: block; }
+
+  .snav { display: flex; align-items: center; justify-content: space-between; margin-top: .875rem; }
+  .nbtn {
+    background: transparent;
+    border: 0.5px solid #b8b6ad;
+    border-radius: 6px;
+    padding: 5px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    color: #6b6a63;
+    font-family: inherit;
+    transition: background .12s, color .12s;
+  }
+  .nbtn:hover:not([disabled]) { background: #f5f4ef; color: #1a1a18; }
+  .nbtn[disabled] { opacity: .3; cursor: not-allowed; }
+  .sctr { font-size: 12px; color: #9c9a91; }
+
+  .lpn {
+    font-size: 13px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-top: .875rem;
+    line-height: 1.5;
+  }
+  .ph-a .lpn { background: #e6f1fb; color: #185fa5; }
+  .ph-b .lpn { background: #eaf3de; color: #3b6d11; }
+
+  .conn { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: .125rem 0; }
+  .cline { width: 1px; height: 20px; background: #dddbd0; }
+  .cpill {
+    background: #f5f4ef;
+    border: 0.5px solid #dddbd0;
+    border-radius: 20px;
+    padding: 3px 14px;
+    font-size: 12px;
+    color: #9c9a91;
+  }
+
+  .rg { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: .875rem; }
+  .rc { background: #f5f4ef; border-radius: 8px; padding: .875rem; text-align: center; }
+  .rv { font-size: 26px; font-weight: 500; }
+  .rl { font-size: 12px; color: #6b6a63; margin-top: 3px; line-height: 1.4; }
+
+  .warn-box {
+    margin-top: .875rem;
+    padding: 10px 14px;
+    background: #faeeda;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #854f0b;
+    line-height: 1.6;
+  }
+  .meta-lbl { font-size: 13px; color: #6b6a63; font-weight: 500; margin-bottom: .625rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="ph ph-a">
+    <span class="bdg">Phase A</span>
+    <h2 class="ph-ttl">Parameter Calibration</h2>
+    <p class="ph-sub">The engine studies 16,000+ historical trips and continuously adjusts its pricing parameters — base fares, per-mile rates, city multipliers — until predictions stop improving.</p>
+    <div class="stabs" id="tabs-a">
+      <button class="stab active" onclick="setStep('a',0)">1 · Base prices</button>
+      <button class="stab" onclick="setStep('a',1)">2 · Hourly rates</button>
+      <button class="stab" onclick="setStep('a',2)">3 · City tuning</button>
+      <button class="stab" onclick="setStep('a',3)">4 · Check accuracy</button>
+    </div>
+    <div class="spnl">
+      <div class="spnl-ttl" id="title-a">Setting the price foundation</div>
+      <p class="spnl-txt" id="text-a">The engine looks at thousands of real transfer trips and calculates the best starting price and per-mile rate for each of the 5 pricing tiers. Each tier is a rate scale assigned to a group of cities with similar cost profiles. Think of it as finding the tuning forks that everything else is calibrated against.</p>
+      <div class="insght-wrap" onclick="toggleTip(this)"><span class="insght" id="insight-a">Minimum 20 trips required per pricing tier</span><div class="ttip" id="tip-a">Linear regression needs enough data points to produce a statistically reliable trend line. With fewer than 20 trips the fitted base fare and per-mile rate would be dominated by outliers. Tiers with insufficient data keep their existing values unchanged.</div></div>
+    </div>
+    <div class="snav">
+      <button class="nbtn" id="prev-a" onclick="prevStep('a')" disabled>&#8592; Back</button>
+      <span class="sctr" id="counter-a">Step 1 of 4</span>
+      <button class="nbtn" id="next-a" onclick="nextStep('a')">Next &#8594;</button>
+    </div>
+    <div class="lpn">Repeats steps 1–4 automatically until accuracy stops improving — or after 100 rounds maximum</div>
+  </div>
+
+  <div class="conn">
+    <div class="cline"></div>
+    <div class="cpill">When Phase A converges, Phase B begins</div>
+    <div class="cline"></div>
+  </div>
+
+  <div class="ph ph-b">
+    <span class="bdg">Phase B</span>
+    <h2 class="ph-ttl">Tier Reassignment</h2>
+    <p class="ph-sub">Some cities end up in the wrong pricing tier. This phase tests all 5 options for each city and switches it to the better one — only if the improvement is significant and doesn't hurt overall accuracy.</p>
+    <div class="stabs" id="tabs-b">
+      <button class="stab active" onclick="setStep('b',0)">1 · Try all tiers</button>
+      <button class="stab" onclick="setStep('b',1)">2 · Find best fit</button>
+      <button class="stab" onclick="setStep('b',2)">3 · Lock change</button>
+      <button class="stab" onclick="setStep('b',3)">4 · Verify or undo</button>
+    </div>
+    <div class="spnl">
+      <div class="spnl-ttl" id="title-b">Trying on all 5 price scales</div>
+      <p class="spnl-txt" id="text-b">For every city with at least 5 historical trips, the system simulates what prices would look like if that city were assigned to each of the 5 tiers. It is like trying 5 different pricing lenses and seeing which one fits — done entirely by math, with no manual input.</p>
+      <div class="insght-wrap" onclick="toggleTip(this)"><span class="insght" id="insight-b">Minimum 5 trips per city required to qualify</span><div class="ttip" id="tip-b">With fewer than 5 trips, accuracy comparison between tiers is statistically meaningless — a single unusual trip could make the wrong tier look best. Five is the minimum for a meaningful majority pattern.</div></div>
+    </div>
+    <div class="snav">
+      <button class="nbtn" id="prev-b" onclick="prevStep('b')" disabled>&#8592; Back</button>
+      <span class="sctr" id="counter-b">Step 1 of 4</span>
+      <button class="nbtn" id="next-b" onclick="nextStep('b')">Next &#8594;</button>
+    </div>
+    <div class="lpn">After each reassignment Phase A re-runs to verify overall accuracy — up to 10 rounds total</div>
+  </div>
+
+  <div class="ph" style="margin-bottom:0;">
+    <div class="meta-lbl">Current results — 16,265 trips analyzed</div>
+    <div class="rg">
+      <div class="rc"><div class="rv" style="color:#185fa5;">65.4%</div><div class="rl">Predictions within ±10% of actual price</div></div>
+      <div class="rc"><div class="rv" style="color:#9c9a91;">66.2%</div><div class="rl">Maximum accuracy this formula can reach</div></div>
+      <div class="rc"><div class="rv" style="color:#3b6d11;">48</div><div class="rl">Cities moved to a better pricing tier</div></div>
+      <div class="rc"><div class="rv" style="color:#1a1a18;">16K+</div><div class="rl">Historical trips analyzed</div></div>
+    </div>
+    <div class="warn-box">The gap to 66.2% cannot be closed by further tuning. Within the same city and distance range, historical prices vary widely — the formula produces one price, not a range.</div>
+  </div>
+
+</div>
+
+<script>
+const DA = [
+  {
+    title: 'Setting the price foundation',
+    text: 'The engine looks at thousands of real transfer trips and calculates the best starting price and per-mile rate for each of the 5 pricing tiers. Each tier is a rate scale assigned to a group of cities with similar cost profiles. Think of it as finding the tuning forks that everything else is calibrated against.',
+    insight: 'Minimum 20 trips required per pricing tier',
+    tip: 'Linear regression needs enough data points to produce a statistically reliable trend line. With fewer than 20 trips the fitted base fare and per-mile rate would be dominated by outliers. Tiers with insufficient data keep their existing values unchanged.'
+  },
+  {
+    title: 'Calibrating time-based bookings',
+    text: 'For trips billed by the hour, a separate calculation runs: the engine finds the median hourly cost for each pricing tier using real hourly bookings. The minimum billing window is always 2 hours, so the formula never counts less than 2 hours of service regardless of actual duration.',
+    insight: 'Median is used instead of average — less affected by outliers',
+    tip: 'Hourly trips occasionally have extreme prices (e.g. multi-day bookings, special events). The median ignores these extremes and picks the "middle" value, giving a more representative hourly rate than an average would.'
+  },
+  {
+    title: 'Adding city-level adjustments',
+    text: 'Even with well-tuned tier parameters, different cities price differently. Each city gets a small correction multiplier based on its own historical data. For example, 1.12 means prices in that city run about 12% above the tier baseline. This is computed by comparing predicted vs actual prices across all trips in that city.',
+    insight: 'Minimum 10 trips per city required; multiplier rounded to 3 decimal places',
+    tip: 'With fewer than 10 trips a city\u2019s multiplier would reflect individual trip anomalies rather than a real local pricing pattern. Rounding to 3 decimal places (e.g. 1.123) prevents overfitting to noise while keeping enough precision for meaningful adjustment.'
+  },
+  {
+    title: 'Measuring how accurate the predictions are',
+    text: 'The engine runs all 16,265 trips through the updated formula and counts how many predictions land within ±10% of what the customer actually paid. That percentage becomes the accuracy score. If it is still rising, the whole loop restarts from step 1.',
+    insight: 'Loop stops when improvement drops below 0.5% over 3 consecutive rounds, or after 100 rounds',
+    tip: 'The 0.5% threshold over 3 rounds detects when the algorithm has converged \u2014 further iterations would produce negligibly small changes. The 100-round safety cap guarantees the process always terminates, even if convergence is unusually slow.'
+  }
+];
+const DB = [
+  {
+    title: 'Trying on all 5 price scales',
+    text: "For every city with at least 5 historical trips, the system simulates what prices would look like if that city were assigned to each of the 5 tiers. It is like trying 5 different pricing lenses and seeing which one fits — done entirely by math, with no manual input.",
+    insight: 'Minimum 5 trips per city required to qualify for testing',
+    tip: 'With fewer than 5 trips, accuracy comparison between tiers is statistically meaningless \u2014 a single unusual trip could make the wrong tier look best. Five is the minimum for a meaningful majority pattern.'
+  },
+  {
+    title: 'Finding the best match',
+    text: "After testing all 5 tiers, accuracy scores are compared. If a different tier would predict that city's prices at least 5 percentage points more accurately than the current assignment, it qualifies for reassignment. Smaller improvements are ignored to avoid reacting to random noise in the data.",
+    insight: 'Must improve accuracy by at least 5 percentage points to trigger a switch',
+    tip: 'A 5 percentage point threshold filters out marginal gains that could be caused by data noise rather than a genuinely better fit. Only confident, meaningful improvements trigger a tier change.'
+  },
+  {
+    title: 'Locking in the switch',
+    text: 'When a better tier is found, the city is reassigned and immediately locked — it cannot be changed again in future rounds. This prevents the system from flip-flopping between options across iterations, which would lead to instability and unpredictable results.',
+    insight: 'Once reassigned, a city stays locked for the entire calibration run',
+    tip: 'Without locking, a city could oscillate between two tiers across rounds \u2014 each switch changes rate_adjustment values, which can make the previous tier look better again, creating an infinite loop.'
+  },
+  {
+    title: 'Checking the overall picture',
+    text: 'After any reassignment, Phase A re-runs completely with the new tier setup. If overall accuracy across all 16,265 trips went down — even if this one city\'s predictions improved — the change is automatically rolled back and the city reverts to its original tier. Individual gains must not hurt the whole system.',
+    insight: 'Reverts automatically if global accuracy drops after reassignment',
+    tip: 'Reassigning one city changes the tier\u2019s regression parameters, which affects ALL other cities on that tier. A local improvement could degrade pricing for dozens of other cities. The rollback check protects the entire system from this cascade effect.'
+  }
+];
+
+let iA = 0, iB = 0;
+
+function setStep(ph, idx) {
+  const D = ph === 'a' ? DA : DB;
+  if (ph === 'a') iA = idx; else iB = idx;
+  document.querySelectorAll('#tabs-' + ph + ' .stab').forEach((t, i) => t.classList.toggle('active', i === idx));
+  const s = D[idx];
+  document.getElementById('title-' + ph).textContent = s.title;
+  document.getElementById('text-' + ph).textContent = s.text;
+  document.getElementById('insight-' + ph).textContent = s.insight;
+  document.getElementById('tip-' + ph).textContent = s.tip;
+  // Close tooltip on step change
+  document.getElementById('insight-' + ph).closest('.insght-wrap').classList.remove('open');
+  document.getElementById('counter-' + ph).textContent = 'Step ' + (idx + 1) + ' of ' + D.length;
+  document.getElementById('prev-' + ph).disabled = idx === 0;
+  document.getElementById('next-' + ph).disabled = idx === D.length - 1;
+}
+function toggleTip(wrap) { wrap.classList.toggle('open'); }
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.insght-wrap')) {
+    document.querySelectorAll('.insght-wrap.open').forEach(function(w) { w.classList.remove('open'); });
+  }
+});
+function prevStep(ph) { const i = ph === 'a' ? iA : iB; if (i > 0) setStep(ph, i - 1); }
+function nextStep(ph) { const D = ph === 'a' ? DA : DB; const i = ph === 'a' ? iA : iB; if (i < D.length - 1) setStep(ph, i + 1); }
+</script>
+</body>
+</html>
