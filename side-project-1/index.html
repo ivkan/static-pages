@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seller Finance Deal Studio</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Seller Finance Deal Studio</p>
+          <h1>Structure the paper. Protect the downside.</h1>
+          <p class="hero-text">
+            Build buyer-friendly acquisition structures with modular financing
+            blocks, stress-test them across operating cases, and produce a
+            polished summary you can share.
+          </p>
+        </div>
+
+        <div class="hero-summary">
+          <p class="summary-label">Current Focus</p>
+          <h2 id="headlineTitle">Hybrid Seller-Carry</h2>
+          <p id="headlineNarrative">
+            A low-cash buyer can still close if the structure leaves enough room
+            for debt service while preserving your repayment path.
+          </p>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel input-panel">
+          <div class="panel-heading">
+            <p class="eyebrow">Inputs</p>
+            <h2>Deal Builder</h2>
+          </div>
+
+          <form id="dealForm" class="form-grid">
+            <div class="section-block">
+              <h3>Deal Basics</h3>
+              <label>
+                <span>Purchase price</span>
+                <input type="text" inputmode="numeric" data-format="amount" id="purchasePrice" name="purchasePrice" value="4000000" />
+              </label>
+              <label>
+                <span>Down payment amount</span>
+                <input type="text" inputmode="numeric" data-format="amount" id="downPaymentAmount" name="downPaymentAmount" value="500000" />
+              </label>
+              <label>
+                <span>Target minimum DSCR</span>
+                <input type="number" id="targetDscr" name="targetDscr" min="0.1" step="0.05" value="1.25" />
+              </label>
+              <label>
+                <span>Hold period (years)</span>
+                <input type="number" id="holdPeriodYears" name="holdPeriodYears" min="1" step="1" value="7" />
+              </label>
+              <label>
+                <span>Exit multiple on net profit</span>
+                <input type="number" id="exitMultiple" name="exitMultiple" min="0" step="0.1" value="3" />
+              </label>
+              <label>
+                <span>Primary case for headline outputs</span>
+                <select id="selectedCase" name="selectedCase">
+                  <option value="plausible" selected>Plausible</option>
+                  <option value="low">Low</option>
+                  <option value="great">Great</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="section-block">
+              <div class="section-row">
+                <h3>Operating Cases</h3>
+                <p class="mini-note">Editable defaults lifted from your pro forma.</p>
+              </div>
+              <div class="table-wrap compact">
+                <table class="input-table">
+                  <thead>
+                    <tr>
+                      <th>Case</th>
+                      <th>Gross Revenue</th>
+                      <th>Net Profit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Low</td>
+                      <td><input type="text" inputmode="numeric" data-format="amount" name="grossRevenueLow" value="4000000" /></td>
+                      <td><input type="text" inputmode="numeric" data-format="amount" name="netProfitLow" value="842000" /></td>
+                    </tr>
+                    <tr>
+                      <td>Plausible</td>
+                      <td><input type="text" inputmode="numeric" data-format="amount" name="grossRevenuePlausible" value="6000000" /></td>
+                      <td><input type="text" inputmode="numeric" data-format="amount" name="netProfitPlausible" value="1428000" /></td>
+                    </tr>
+                    <tr>
+                      <td>Great</td>
+                      <td><input type="text" inputmode="numeric" data-format="amount" name="grossRevenueGreat" value="8000000" /></td>
+                      <td><input type="text" inputmode="numeric" data-format="amount" name="netProfitGreat" value="2034000" /></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="section-block">
+              <div class="section-row">
+                <h3>Structure Presets</h3>
+                <p class="mini-note">Use a preset, then fine-tune the tranches.</p>
+              </div>
+              <div class="preset-row">
+                <button type="button" class="preset-button" data-preset="sellerCarry">Seller Carry</button>
+                <button type="button" class="preset-button" data-preset="hybrid">Hybrid Blend</button>
+                <button type="button" class="preset-button" data-preset="royaltyBridge">Royalty Bridge</button>
+              </div>
+            </div>
+
+            <div class="section-block">
+              <div class="section-row">
+                <h3>Financing Blocks</h3>
+                <p class="mini-note">Toggle any tranche on or off.</p>
+              </div>
+
+              <div class="block-card">
+                <div class="block-header">
+                  <label class="toggle-label">
+                    <input type="checkbox" name="seniorEnabled" checked />
+                    <span>Senior Debt</span>
+                  </label>
+                </div>
+                <div class="block-grid">
+                  <label><span>Amount</span><input type="text" inputmode="numeric" data-format="amount" name="seniorAmount" value="1500000" /></label>
+                  <label><span>Rate %</span><input type="number" name="seniorRate" min="0" step="0.1" value="9.5" /></label>
+                  <label><span>Term (years)</span><input type="number" name="seniorTermYears" min="1" step="1" value="10" /></label>
+                  <label><span>Structure</span><select name="seniorType"><option value="amortizing" selected>Amortizing</option><option value="interest-only">Interest-only</option><option value="balloon">Balloon</option></select></label>
+                  <label><span>Interest-only period (months)</span><input type="number" name="seniorIoMonths" min="0" step="1" value="0" /></label>
+                  <label><span>Balloon due (years)</span><input type="number" name="seniorBalloonYears" min="1" step="1" value="5" /></label>
+                </div>
+              </div>
+
+              <div class="block-card">
+                <div class="block-header">
+                  <label class="toggle-label">
+                    <input type="checkbox" name="mezzEnabled" />
+                    <span>Mezzanine</span>
+                  </label>
+                </div>
+                <div class="block-grid">
+                  <label><span>Amount</span><input type="text" inputmode="numeric" data-format="amount" name="mezzAmount" value="750000" /></label>
+                  <label><span>Rate %</span><input type="number" name="mezzRate" min="0" step="0.1" value="13" /></label>
+                  <label><span>Term (years)</span><input type="number" name="mezzTermYears" min="1" step="1" value="7" /></label>
+                  <label><span>Structure</span><select name="mezzType"><option value="amortizing">Amortizing</option><option value="interest-only" selected>Interest-only</option><option value="balloon">Balloon</option></select></label>
+                  <label><span>Interest-only period (months)</span><input type="number" name="mezzIoMonths" min="0" step="1" value="12" /></label>
+                  <label><span>Balloon due (years)</span><input type="number" name="mezzBalloonYears" min="1" step="1" value="5" /></label>
+                </div>
+              </div>
+
+              <div class="block-card">
+                <div class="block-header">
+                  <label class="toggle-label">
+                    <input type="checkbox" name="sellerEnabled" checked />
+                    <span>Seller Note</span>
+                  </label>
+                </div>
+                <div class="block-grid">
+                  <label><span>Amount</span><input type="text" inputmode="numeric" data-format="amount" name="sellerAmount" value="1750000" /></label>
+                  <label><span>Rate %</span><input type="number" name="sellerRate" min="0" step="0.1" value="8" /></label>
+                  <label><span>Term (years)</span><input type="number" name="sellerTermYears" min="1" step="1" value="10" /></label>
+                  <label><span>Structure</span><select name="sellerType"><option value="amortizing" selected>Amortizing</option><option value="interest-only">Interest-only</option><option value="balloon">Balloon</option></select></label>
+                  <label><span>Interest-only period (months)</span><input type="number" name="sellerIoMonths" min="0" step="1" value="12" /></label>
+                  <label><span>Balloon due (years)</span><input type="number" name="sellerBalloonYears" min="1" step="1" value="5" /></label>
+                </div>
+              </div>
+
+              <div class="block-card">
+                <div class="block-header">
+                  <label class="toggle-label">
+                    <input type="checkbox" name="royaltyEnabled" />
+                    <span>Royalty Advance</span>
+                  </label>
+                </div>
+                <div class="block-grid">
+                  <label><span>Advance amount</span><input type="text" inputmode="numeric" data-format="amount" name="royaltyAdvanceAmount" value="500000" /></label>
+                  <label><span>Royalty % of gross revenue</span><input type="number" name="royaltyRatePct" min="0" step="0.1" value="6" /></label>
+                  <label><span>Repayment cap multiple</span><input type="number" name="royaltyCapMultiple" min="0" step="0.05" value="1.6" /></label>
+                  <label><span>Treatment</span><select name="royaltyMode"><option value="stacked" selected>Stack on top</option><option value="preserve">Preserve target DSCR</option></select></label>
+                </div>
+              </div>
+
+              <div class="block-card">
+                <div class="block-header">
+                  <label class="toggle-label">
+                    <input type="checkbox" name="earnoutEnabled" />
+                    <span>Earnout</span>
+                  </label>
+                </div>
+                <div class="block-grid">
+                  <label><span>Earnout amount</span><input type="text" inputmode="numeric" data-format="amount" name="earnoutAmount" value="250000" /></label>
+                  <label><span>Payment delay (months)</span><input type="number" name="earnoutDelayMonths" min="0" step="1" value="24" /></label>
+                </div>
+              </div>
+            </div>
+          </form>
+
+          <div class="constraint-box" id="constraintBox"></div>
+          <div class="warnings-box" id="warningsBox"></div>
+        </section>
+
+        <section class="panel results-panel">
+          <div class="panel-heading">
+            <p class="eyebrow">Headline View</p>
+            <h2>Shareable Summary</h2>
+          </div>
+
+          <div class="kpi-grid" id="kpiGrid"></div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Term Sheet Item</th>
+                  <th id="selectedScenarioName">Current Structure</th>
+                </tr>
+              </thead>
+              <tbody id="resultsTable"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel stress-panel">
+          <div class="panel-heading">
+            <p class="eyebrow">Stress Test</p>
+            <h2>Low / Plausible / Great Cases</h2>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Metric</th>
+                  <th>Low</th>
+                  <th>Plausible</th>
+                  <th>Great</th>
+                </tr>
+              </thead>
+              <tbody id="stressTable"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
