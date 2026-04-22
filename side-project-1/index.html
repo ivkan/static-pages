@@ -184,6 +184,7 @@
                   <label><span>Advance amount</span><input type="text" inputmode="numeric" data-format="amount" name="royaltyAdvanceAmount" value="500000" /></label>
                   <label><span>Royalty % of gross revenue</span><input type="number" name="royaltyRatePct" min="0" step="0.1" value="6" /></label>
                   <label><span>Repayment cap multiple</span><input type="number" name="royaltyCapMultiple" min="0" step="0.05" value="1.6" /></label>
+                  <label><span>Royalty term (years)</span><input type="number" name="royaltyTermYears" min="1" step="1" value="7" /></label>
                   <label><span>Treatment</span><select name="royaltyMode"><option value="stacked" selected>Stack on top</option><option value="preserve">Preserve target DSCR</option></select></label>
                 </div>
               </div>
@@ -249,6 +250,21 @@
           </div>
         </section>
       </main>
+
+      <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
+      <aside class="detail-drawer" id="detailDrawer" aria-hidden="true">
+        <div class="drawer-header">
+          <div>
+            <p class="eyebrow">Metric Detail</p>
+            <h2 id="drawerTitle">Detail</h2>
+          </div>
+          <button type="button" class="drawer-close" id="drawerClose" aria-label="Close detail panel">
+            Close
+          </button>
+        </div>
+        <p class="drawer-subtitle" id="drawerSubtitle"></p>
+        <div class="drawer-body" id="drawerBody"></div>
+      </aside>
     </div>
 
     <script src="./app.js"></script>

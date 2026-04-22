@@ -33,8 +33,16 @@ const warningsBox = document.querySelector("#warningsBox");
 const kpiGrid = document.querySelector("#kpiGrid");
 const presetButtons = Array.from(document.querySelectorAll(".preset-button"));
 const amountInputs = Array.from(document.querySelectorAll('input[data-format="amount"]'));
+const drawerBackdrop = document.querySelector("#drawerBackdrop");
+const detailDrawer = document.querySelector("#detailDrawer");
+const drawerClose = document.querySelector("#drawerClose");
+const drawerTitle = document.querySelector("#drawerTitle");
+const drawerSubtitle = document.querySelector("#drawerSubtitle");
+const drawerBody = document.querySelector("#drawerBody");
 
 const CASE_KEYS = ["low", "plausible", "great"];
+let currentRenderState = null;
+let currentDetail = null;
 
 const PRESETS = {
   sellerCarry: {
@@ -103,6 +111,7 @@ const PRESETS = {
     royaltyAdvanceAmount: 1500000,
     royaltyRatePct: 6,
     royaltyCapMultiple: 1.6,
+    royaltyTermYears: 7,
     royaltyMode: "preserve",
     earnoutEnabled: false,
   },
@@ -157,6 +166,7 @@ function readInputs() {
       advanceAmount: readNumber("royaltyAdvanceAmount"),
       ratePct: readNumber("royaltyRatePct") / 100,
       capMultiple: readNumber("royaltyCapMultiple"),
+      termYears: readNumber("royaltyTermYears") || 1,
       mode: formValue("royaltyMode")?.value || "stacked",
     },
     earnout: {
@@ -258,6 +268,7 @@ function buildDebtSchedule(tranche, holdMonths) {
     let interest = 0;
     let principal = 0;
     let balloon = 0;
+    const beginningBalance = balance;
 
     if (balance > 0) {
       interest = balance * monthlyRate;
@@ -309,7 +320,8 @@ function buildDebtSchedule(tranche, holdMonths) {
       interest,
       principal,
       balloon,
-      balance,
+      beginningBalance,
+      endingBalance: balance,
     });
   }
 
@@ -342,40 +354,73 @@ function buildRoyaltySchedule(inputs, scenario, debtAnnualPayments) {
   if (!inputs.royalty.enabled || inputs.royalty.advanceAmount <= 0) {
     return {
       annualPayments: Array.from({ length: inputs.holdPeriodYears }, () => 0),
+      annualRows: Array.from({ length: inputs.holdPeriodYears }, (_, index) => ({
+        year: index + 1,
+        scheduled: 0,
+        actual: 0,
+        balloon: 0,
+        remainingCap: 0,
+      })),
       totalPaid: 0,
       remainingCap: 0,
       yearOnePayment: 0,
       peakAnnualPayment: 0,
+      cap: 0,
+      scheduledAnnualRoyalty: 0,
     };
   }
 
   const cap = inputs.royalty.advanceAmount * inputs.royalty.capMultiple;
   const scheduledAnnualRoyalty = scenario.grossRevenue * inputs.royalty.ratePct;
   const annualPayments = [];
+  const annualRows = [];
   let cumulativePaid = 0;
+  const maturityYear = Math.min(inputs.holdPeriodYears, Math.max(1, inputs.royalty.termYears));
 
   for (let yearIndex = 0; yearIndex < inputs.holdPeriodYears; yearIndex += 1) {
     const debtLoad = debtAnnualPayments[yearIndex] || 0;
-    let annualRoyalty = scheduledAnnualRoyalty;
+    const year = yearIndex + 1;
+    let annualRoyalty = year <= maturityYear ? scheduledAnnualRoyalty : 0;
 
     if (inputs.royalty.mode === "preserve") {
       const maxObligations = scenario.netProfit / inputs.targetDscr;
       annualRoyalty = Math.max(0, maxObligations - debtLoad);
       annualRoyalty = Math.min(annualRoyalty, scheduledAnnualRoyalty);
+      if (year > maturityYear) {
+        annualRoyalty = 0;
+      }
     }
 
-    const remainingCap = Math.max(0, cap - cumulativePaid);
-    const actualPayment = Math.min(annualRoyalty, remainingCap);
+    let remainingCap = Math.max(0, cap - cumulativePaid);
+    let actualPayment = Math.min(annualRoyalty, remainingCap);
+    let balloon = 0;
+
+    if (year === maturityYear && remainingCap - actualPayment > 0) {
+      balloon = remainingCap - actualPayment;
+      actualPayment += balloon;
+    }
+
     cumulativePaid += actualPayment;
+    remainingCap = Math.max(0, cap - cumulativePaid);
     annualPayments.push(actualPayment);
+    annualRows.push({
+      year,
+      scheduled: annualRoyalty,
+      actual: actualPayment,
+      balloon,
+      remainingCap,
+    });
   }
 
   return {
     annualPayments,
+    annualRows,
     totalPaid: cumulativePaid,
     remainingCap: Math.max(0, cap - cumulativePaid),
     yearOnePayment: annualPayments[0] || 0,
     peakAnnualPayment: Math.max(...annualPayments, 0),
+    cap,
+    scheduledAnnualRoyalty,
   };
 }
 
@@ -388,6 +433,7 @@ function buildEarnoutSchedule(inputs) {
       totalPaid: 0,
       yearOnePayment: 0,
       peakAnnualPayment: 0,
+      targetYear: 0,
     };
   }
 
@@ -402,6 +448,7 @@ function buildEarnoutSchedule(inputs) {
     totalPaid: inputs.earnout.amount,
     yearOnePayment: annualPayments[0] || 0,
     peakAnnualPayment: Math.max(...annualPayments, 0),
+    targetYear,
   };
 }
 
@@ -465,10 +512,14 @@ function computePayback(cashFlows) {
 function evaluateCase(inputs, caseKey) {
   const scenario = inputs.cases[caseKey];
   const holdMonths = inputs.holdPeriodYears * 12;
-
-  const debtSchedules = Object.values(inputs.tranches).map((tranche) =>
-    buildDebtSchedule(tranche, holdMonths),
+  const activeTranches = Object.values(inputs.tranches).filter(
+    (tranche) => tranche.enabled && tranche.amount > 0,
   );
+
+  const trancheSchedules = Object.fromEntries(
+    activeTranches.map((tranche) => [tranche.key, buildDebtSchedule(tranche, holdMonths)]),
+  );
+  const debtSchedules = activeTranches.map((tranche) => trancheSchedules[tranche.key]);
 
   const debtAnnualPayments = sumArrays(
     debtSchedules.map((schedule) => schedule.annualPayments),
@@ -499,21 +550,21 @@ function evaluateCase(inputs, caseKey) {
   const yearOneObligations = totalAnnualObligations[0] || 0;
   const peakAnnualObligations = Math.max(...totalAnnualObligations, 0);
   const dscrYearOne = yearOneObligations > 0 ? scenario.netProfit / yearOneObligations : Infinity;
-  const sellerFinancingTotal =
-    (inputs.tranches.seller.enabled ? inputs.tranches.seller.amount : 0) +
-    (inputs.royalty.enabled ? inputs.royalty.advanceAmount : 0) +
-    (inputs.earnout.enabled ? inputs.earnout.amount : 0);
+  const yearOneDebt = debtSchedules.reduce((sum, schedule) => sum + schedule.yearOnePayment, 0);
 
   return {
     caseKey,
     label: scenario.label,
     grossRevenue: scenario.grossRevenue,
     netProfit: scenario.netProfit,
+    activeTranches,
+    trancheSchedules,
     debtSchedules,
     debtAnnualPayments,
     royaltySchedule,
     earnoutSchedule,
     totalAnnualObligations,
+    yearOneDebt,
     yearOneObligations,
     peakAnnualObligations,
     dscrYearOne,
@@ -523,7 +574,6 @@ function evaluateCase(inputs, caseKey) {
     exitEquityValue,
     remainingDebt,
     annualCashFlows,
-    sellerFinancingTotal,
   };
 }
 
@@ -538,52 +588,594 @@ function buildSummary(inputs, selectedResult) {
     inputs.purchasePrice - (inputs.earnout.enabled ? inputs.earnout.amount : 0);
   const fundingGap = closeSources - cashNeededAtClose;
   const yearOneRoyalty = selectedResult.royaltySchedule.yearOnePayment;
-  const yearOneDebt = selectedResult.debtSchedules.reduce(
-    (sum, schedule) => sum + schedule.yearOnePayment,
-    0,
-  );
 
   return {
     closeSources,
     cashNeededAtClose,
     fundingGap,
-    yearOneDebt,
+    yearOneDebt: selectedResult.yearOneDebt,
     yearOneRoyalty,
     sellerPaperAtRisk: inputs.purchasePrice - inputs.downPaymentAmount,
   };
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function formatDscr(value) {
+  return Number.isFinite(value) ? `${numberOne.format(value)}x` : "n/a";
+}
+
+function formatIrr(value) {
+  return value === null ? "n/a" : percentOne.format(value);
+}
+
+function formatPayback(value) {
+  return value === null ? "Beyond hold" : `${value} yrs`;
+}
+
+function toSentenceStructure(structure) {
+  if (structure === "interest-only") {
+    return "Interest-only";
+  }
+  if (structure === "balloon") {
+    return "Balloon";
+  }
+  return "Amortizing";
+}
+
+function infoButton(fieldKey, caseKey) {
+  const meta = getMetricMeta(fieldKey, caseKey);
+  return `<button type="button" class="info-button" data-open-detail="${fieldKey}" data-case="${caseKey || ""}" title="${escapeHtml(meta.tooltip)}" aria-label="${escapeHtml(meta.title)} info">i</button>`;
+}
+
+function clickableValue(value, fieldKey, caseKey) {
+  return `<button type="button" class="value-button" data-open-detail="${fieldKey}" data-case="${caseKey || ""}">${value}</button>`;
+}
+
+function summaryTable(rows) {
+  return `
+    <div class="drawer-table-wrap">
+      <table class="drawer-table">
+        <tbody>
+          ${rows.map(([label, value]) => `<tr><td>${label}</td><td>${value}</td></tr>`).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function scheduleTable(headers, rows) {
+  return `
+    <div class="drawer-table-wrap">
+      <table class="drawer-table">
+        <thead>
+          <tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function trancheSummaryTable(state) {
+  const { inputs } = state;
+  const active = Object.values(inputs.tranches).filter((tranche) => tranche.enabled && tranche.amount > 0);
+  if (!active.length) {
+    return "<p class=\"drawer-empty\">No debt tranches are currently enabled.</p>";
+  }
+
+  return scheduleTable(
+    ["Tranche", "Amount", "Rate", "Structure", "Year 1 Payment", "Exit Balance"],
+    active.map((tranche) => {
+      const schedule = state.selectedResult.trancheSchedules[tranche.key];
+      return [
+        tranche.label,
+        currency.format(tranche.amount),
+        percentOne.format(tranche.annualRate),
+        toSentenceStructure(tranche.structure),
+        currency.format(schedule.yearOnePayment),
+        currency.format(schedule.remainingBalance),
+      ];
+    }),
+  );
+}
+
+function amortizationSections(state) {
+  const { inputs, selectedResult } = state;
+  const active = Object.values(inputs.tranches).filter((tranche) => tranche.enabled && tranche.amount > 0);
+  if (!active.length) {
+    return "<p class=\"drawer-empty\">No amortization schedule is available because no debt tranche is on.</p>";
+  }
+
+  return active
+    .map((tranche) => {
+      const schedule = selectedResult.trancheSchedules[tranche.key];
+      const sampleRows = schedule.monthlyRows
+        .filter((row) => row.month <= Math.min(inputs.holdPeriodYears * 12, 12))
+        .map((row) => [
+          `M${row.month}`,
+          currency.format(row.beginningBalance),
+          currency.format(row.payment),
+          currency.format(row.interest),
+          currency.format(row.principal),
+          currency.format(row.balloon),
+          currency.format(row.endingBalance),
+        ]);
+
+      return `
+        <section class="drawer-section">
+          <h3>${tranche.label} Amortization</h3>
+          <p class="drawer-note">${toSentenceStructure(tranche.structure)} at ${percentOne.format(tranche.annualRate)} over ${tranche.termYears} years.</p>
+          ${summaryTable([
+            ["Principal", currency.format(tranche.amount)],
+            ["Year 1 payment", currency.format(schedule.yearOnePayment)],
+            ["Peak annual payment", currency.format(schedule.peakAnnualPayment)],
+            ["Balance at hold end", currency.format(schedule.remainingBalance)],
+          ])}
+          ${scheduleTable(
+            ["Month", "Begin", "Payment", "Interest", "Principal", "Balloon", "End"],
+            sampleRows,
+          )}
+        </section>
+      `;
+    })
+    .join("");
+}
+
+function annualObligationRows(result) {
+  return Array.from({ length: currentRenderState.inputs.holdPeriodYears }, (_, index) => [
+    `Year ${index + 1}`,
+    currency.format(result.debtAnnualPayments[index] || 0),
+    currency.format(result.royaltySchedule.annualPayments[index] || 0),
+    currency.format(result.earnoutSchedule.annualPayments[index] || 0),
+    currency.format(result.totalAnnualObligations[index] || 0),
+    currency.format(result.netProfit - (result.totalAnnualObligations[index] || 0)),
+  ]);
+}
+
+function cashFlowRows(result) {
+  return result.annualCashFlows.map((flow, index) => {
+    if (index === 0) {
+      return ["Close", "Buyer down payment", currency.format(flow)];
+    }
+
+    const operatingCash = result.netProfit - (result.totalAnnualObligations[index - 1] || 0);
+    const exitAdd = index === result.annualCashFlows.length - 1 ? result.exitEquityValue : 0;
+    return [
+      `Year ${index}`,
+      `${currency.format(operatingCash)} operating ${exitAdd ? `+ ${currency.format(exitAdd)} exit` : ""}`,
+      currency.format(flow),
+    ];
+  });
+}
+
+function buildRoyaltyCapBody(state, result) {
+  return `
+    <section class="drawer-section">
+      ${summaryTable([
+        ["Advance amount", currency.format(state.inputs.royalty.advanceAmount)],
+        ["Cap multiple", `${numberOne.format(state.inputs.royalty.capMultiple)}x`],
+        ["Royalty term", `${state.inputs.royalty.termYears} years`],
+        ["Total cap", currency.format(result.royaltySchedule.cap)],
+        ["Paid by hold end", currency.format(result.royaltySchedule.totalPaid)],
+        ["Remaining cap", currency.format(result.royaltySchedule.remainingCap)],
+      ])}
+    </section>
+    <section class="drawer-section">
+      <h3>Royalty Schedule</h3>
+      ${scheduleTable(
+        ["Year", "Scheduled", "Actual", "Balloon", "Remaining Cap"],
+        result.royaltySchedule.annualRows.map((row) => [
+          `Year ${row.year}`,
+          currency.format(row.scheduled),
+          currency.format(row.actual),
+          currency.format(row.balloon),
+          currency.format(row.remainingCap),
+        ]),
+      )}
+    </section>
+  `;
+}
+
+function getMetricMeta(fieldKey, caseKey = currentRenderState?.inputs?.selectedCase || "plausible") {
+  const state = currentRenderState;
+  if (!state) {
+    return {
+      title: "Detail unavailable",
+      tooltip: "Render the model first.",
+      subtitle: "",
+      body: "<p class=\"drawer-empty\">No detail is available yet.</p>",
+    };
+  }
+
+  const result = state.results[caseKey] || state.selectedResult;
+  const selectedResult = state.selectedResult;
+  const detailMap = {
+    yearOneObligations: {
+      title: "Year 1 Obligations",
+      tooltip: "Total year-one burden from debt service, royalty payments, and earnout.",
+      subtitle: `${result.label} case`,
+      body: `
+        <section class="drawer-section">
+          <p>Year 1 obligations combine debt service, royalty, and any delayed earnout due in the first year.</p>
+          ${summaryTable([
+            ["Debt service", currency.format(result.yearOneDebt)],
+            ["Royalty", currency.format(result.royaltySchedule.yearOnePayment)],
+            ["Earnout", currency.format(result.earnoutSchedule.yearOnePayment)],
+            ["Total", currency.format(result.yearOneObligations)],
+          ])}
+        </section>
+        <section class="drawer-section">
+          <h3>Annual Obligation Schedule</h3>
+          ${scheduleTable(
+            ["Year", "Debt", "Royalty", "Earnout", "Total", "Net after obligations"],
+            annualObligationRows(result),
+          )}
+        </section>
+        <section class="drawer-section">
+          <h3>Debt Tranche Support</h3>
+          ${trancheSummaryTable(state)}
+        </section>
+        ${amortizationSections(state)}
+      `,
+    },
+    dscr: {
+      title: "Debt Service Coverage Ratio",
+      tooltip: "Net profit divided by year-one obligations for the selected case.",
+      subtitle: `${result.label} case`,
+      body: `
+        <section class="drawer-section">
+          <p>DSCR here is based on net profit from your operating case divided by year-one obligations.</p>
+          ${summaryTable([
+            ["Net profit", currency.format(result.netProfit)],
+            ["Year 1 obligations", currency.format(result.yearOneObligations)],
+            ["Computed DSCR", formatDscr(result.dscrYearOne)],
+            ["Target floor", formatDscr(state.inputs.targetDscr)],
+          ])}
+        </section>
+        <section class="drawer-section">
+          <h3>Coverage by Case</h3>
+          ${scheduleTable(
+            ["Case", "Net Profit", "Year 1 Obligations", "DSCR"],
+            CASE_KEYS.map((key) => {
+              const row = state.results[key];
+              return [row.label, currency.format(row.netProfit), currency.format(row.yearOneObligations), formatDscr(row.dscrYearOne)];
+            }),
+          )}
+        </section>
+      `,
+    },
+    buyerIrr: {
+      title: "Buyer IRR",
+      tooltip: "Internal rate of return on buyer equity, including annual cash flow and exit proceeds.",
+      subtitle: `${result.label} case over ${state.inputs.holdPeriodYears} years`,
+      body: `
+        <section class="drawer-section">
+          <p>IRR uses the buyer down payment at close, annual cash flow after obligations, and the modeled exit equity at the end of the hold period.</p>
+          ${summaryTable([
+            ["Buyer down payment", currency.format(state.inputs.downPaymentAmount)],
+            ["Exit equity", currency.format(result.exitEquityValue)],
+            ["Hold period", `${state.inputs.holdPeriodYears} years`],
+            ["Calculated IRR", formatIrr(result.irr)],
+          ])}
+        </section>
+        <section class="drawer-section">
+          <h3>Cash Flow Support</h3>
+          ${scheduleTable(["Period", "Drivers", "Cash Flow"], cashFlowRows(result))}
+        </section>
+      `,
+    },
+    payback: {
+      title: "Payback Period",
+      tooltip: "Years until cumulative buyer cash flow turns positive.",
+      subtitle: `${result.label} case`,
+      body: `
+        <section class="drawer-section">
+          <p>Payback is the first year in which cumulative buyer cash flow recovers the original down payment.</p>
+          ${summaryTable([
+            ["Buyer down payment", currency.format(state.inputs.downPaymentAmount)],
+            ["Payback", formatPayback(result.payback)],
+          ])}
+        </section>
+        <section class="drawer-section">
+          <h3>Cumulative Cash Flow</h3>
+          ${scheduleTable(
+            ["Period", "Cash Flow", "Cumulative"],
+            (() => {
+              let cumulative = 0;
+              return result.annualCashFlows.map((flow, index) => {
+                cumulative += flow;
+                return [index === 0 ? "Close" : `Year ${index}`, currency.format(flow), currency.format(cumulative)];
+              });
+            })(),
+          )}
+        </section>
+      `,
+    },
+    exitEquity: {
+      title: "Buyer Exit Equity",
+      tooltip: "Exit value minus debt still outstanding at the modeled exit date.",
+      subtitle: `${result.label} case`,
+      body: `
+        <section class="drawer-section">
+          <p>Exit equity equals resale value at exit minus any debt still unpaid when the buyer exits.</p>
+          ${summaryTable([
+            ["Net profit", currency.format(result.netProfit)],
+            ["Exit multiple", `${numberOne.format(state.inputs.exitMultiple)}x`],
+            ["Exit value", currency.format(result.exitValue)],
+            ["Debt outstanding", currency.format(result.remainingDebt)],
+            ["Exit equity", currency.format(result.exitEquityValue)],
+          ])}
+        </section>
+        <section class="drawer-section">
+          <h3>Debt at Exit</h3>
+          ${trancheSummaryTable(state)}
+        </section>
+      `,
+    },
+    fundingGap: {
+      title: "Funding Gap",
+      tooltip: "Difference between close sources and cash needed at closing.",
+      subtitle: "Sources and uses at close",
+      body: `
+        <section class="drawer-section">
+          <p>Funding gap shows whether the structure covers closing needs after any earnout deferred beyond close.</p>
+          ${summaryTable([
+            ["Purchase price", currency.format(state.inputs.purchasePrice)],
+            ["Less earnout deferred", currency.format(state.inputs.earnout.enabled ? state.inputs.earnout.amount : 0)],
+            ["Cash needed at close", currency.format(state.summary.cashNeededAtClose)],
+            ["Buyer down payment", currency.format(state.inputs.downPaymentAmount)],
+            ["Debt + seller paper + royalty", currency.format(state.summary.closeSources - state.inputs.downPaymentAmount)],
+            ["Funding gap / excess", state.summary.fundingGap >= 0 ? `${currency.format(state.summary.fundingGap)} excess` : currency.format(Math.abs(state.summary.fundingGap))],
+          ])}
+        </section>
+      `,
+    },
+    purchasePrice: {
+      title: "Purchase Price",
+      tooltip: "Total enterprise value used for the transaction.",
+      subtitle: "Deal input",
+      body: summaryTable([["Purchase price", currency.format(state.inputs.purchasePrice)]]),
+    },
+    buyerDownPayment: {
+      title: "Buyer Down Payment",
+      tooltip: "Fixed cash contribution required from the buyer at closing.",
+      subtitle: "Deal input",
+      body: summaryTable([["Buyer cash in", currency.format(state.inputs.downPaymentAmount)]]),
+    },
+    cashNeededAtClose: {
+      title: "Cash Needed at Close",
+      tooltip: "Purchase price less any amount deferred into earnout.",
+      subtitle: "Use of funds at closing",
+      body: summaryTable([
+        ["Purchase price", currency.format(state.inputs.purchasePrice)],
+        ["Deferred earnout", currency.format(state.inputs.earnout.enabled ? state.inputs.earnout.amount : 0)],
+        ["Cash needed", currency.format(state.summary.cashNeededAtClose)],
+      ]),
+    },
+    closeSources: {
+      title: "Total Close Sources",
+      tooltip: "All dollars available at close from buyer cash, debt, seller paper, and royalty advance.",
+      subtitle: "Sources of funds",
+      body: summaryTable([
+        ["Buyer down payment", currency.format(state.inputs.downPaymentAmount)],
+        ["Senior debt", currency.format(state.inputs.tranches.senior.enabled ? state.inputs.tranches.senior.amount : 0)],
+        ["Mezzanine", currency.format(state.inputs.tranches.mezz.enabled ? state.inputs.tranches.mezz.amount : 0)],
+        ["Seller note", currency.format(state.inputs.tranches.seller.enabled ? state.inputs.tranches.seller.amount : 0)],
+        ["Royalty advance", currency.format(state.inputs.royalty.enabled ? state.inputs.royalty.advanceAmount : 0)],
+        ["Total", currency.format(state.summary.closeSources)],
+      ]),
+    },
+    sellerNotePrincipal: {
+      title: "Seller Note Principal",
+      tooltip: "Face amount of the seller note you are carrying in the structure.",
+      subtitle: "Seller paper at close",
+      body: `
+        <section class="drawer-section">
+          ${summaryTable([
+            ["Principal", currency.format(state.inputs.tranches.seller.enabled ? state.inputs.tranches.seller.amount : 0)],
+            ["Rate", percentOne.format(state.inputs.tranches.seller.annualRate || 0)],
+            ["Term", `${state.inputs.tranches.seller.termYears || 0} years`],
+            ["Structure", toSentenceStructure(state.inputs.tranches.seller.structure || "amortizing")],
+          ])}
+        </section>
+        ${amortizationSections(state)}
+      `,
+    },
+    royaltyAdvance: {
+      title: "Royalty Advance",
+      tooltip: "Upfront capital funded by the royalty stream instead of standard amortizing debt.",
+      subtitle: "Royalty financing",
+      body: `
+        <section class="drawer-section">
+          ${summaryTable([
+            ["Advance amount", currency.format(state.inputs.royalty.enabled ? state.inputs.royalty.advanceAmount : 0)],
+            ["Royalty rate", percentOne.format(state.inputs.royalty.ratePct || 0)],
+            ["Cap multiple", `${numberOne.format(state.inputs.royalty.capMultiple || 0)}x`],
+            ["Royalty term", `${state.inputs.royalty.termYears || 0} years`],
+            ["Treatment", state.inputs.royalty.mode === "preserve" ? "Preserve DSCR" : "Stack on top"],
+          ])}
+        </section>
+      `,
+    },
+    royaltyRepaymentCap: {
+      title: "Royalty Repayment Cap",
+      tooltip: "Maximum cumulative royalty repayment allowed before the royalty shuts off.",
+      subtitle: `${result.label} case`,
+      body: buildRoyaltyCapBody(state, result),
+    },
+    earnout: {
+      title: "Earnout",
+      tooltip: "Deferred purchase price paid later instead of at close.",
+      subtitle: "Earnout timing",
+      body: summaryTable([
+        ["Earnout amount", currency.format(state.inputs.earnout.enabled ? state.inputs.earnout.amount : 0)],
+        ["Delay", `${state.inputs.earnout.delayMonths} months`],
+        ["Modeled payment year", state.selectedResult.earnoutSchedule.targetYear ? `Year ${state.selectedResult.earnoutSchedule.targetYear}` : "Off"],
+      ]),
+    },
+    yearOneDebtService: {
+      title: "Year 1 Debt Service",
+      tooltip: "Debt-only payments due in year one, excluding royalty and earnout.",
+      subtitle: `${selectedResult.label} case`,
+      body: `
+        <section class="drawer-section">
+          ${summaryTable([["Year 1 debt service", currency.format(state.summary.yearOneDebt)]])}
+        </section>
+        <section class="drawer-section">
+          <h3>Debt Breakdown</h3>
+          ${trancheSummaryTable(state)}
+        </section>
+        ${amortizationSections(state)}
+      `,
+    },
+    yearOneRoyaltyBurden: {
+      title: "Year 1 Royalty Burden",
+      tooltip: "Royalty expected in year one under the chosen operating case.",
+      subtitle: `${selectedResult.label} case`,
+      body: buildRoyaltyCapBody(state, selectedResult),
+    },
+    peakAnnualObligations: {
+      title: "Peak Annual Obligations",
+      tooltip: "Highest annual total of debt, royalty, and earnout within the hold period.",
+      subtitle: `${result.label} case`,
+      body: `
+        <section class="drawer-section">
+          ${summaryTable([["Peak obligations", currency.format(result.peakAnnualObligations)]])}
+        </section>
+        <section class="drawer-section">
+          <h3>Annual Obligation Schedule</h3>
+          ${scheduleTable(
+            ["Year", "Debt", "Royalty", "Earnout", "Total"],
+            annualObligationRows(result).map((row) => row.slice(0, 5)),
+          )}
+        </section>
+        ${amortizationSections(state)}
+      `,
+    },
+    exitValueAssumption: {
+      title: "Exit Value Assumption",
+      tooltip: "Resale value modeled at the end of the hold period using a net-profit multiple.",
+      subtitle: `${result.label} case`,
+      body: summaryTable([
+        ["Net profit", currency.format(result.netProfit)],
+        ["Exit multiple", `${numberOne.format(state.inputs.exitMultiple)}x`],
+        ["Exit value", currency.format(result.exitValue)],
+      ]),
+    },
+    debtOutstandingAtExit: {
+      title: "Debt Outstanding at Exit",
+      tooltip: "Remaining unpaid debt across active tranches at the modeled exit date.",
+      subtitle: `${result.label} case`,
+      body: `
+        <section class="drawer-section">
+          ${summaryTable([["Total debt outstanding", currency.format(result.remainingDebt)]])}
+        </section>
+        <section class="drawer-section">
+          <h3>Tranche Balances</h3>
+          ${trancheSummaryTable(state)}
+        </section>
+        ${amortizationSections(state)}
+      `,
+    },
+    grossRevenue: {
+      title: "Gross Revenue",
+      tooltip: "Revenue assumption for the selected operating case.",
+      subtitle: `${result.label} operating case`,
+      body: summaryTable([
+        ["Gross revenue", currency.format(result.grossRevenue)],
+        ["Royalty based on revenue", state.inputs.royalty.enabled ? "Yes" : "No"],
+      ]),
+    },
+    netProfit: {
+      title: "Net Profit",
+      tooltip: "Profit assumption used for DSCR, buyer cash flow, and exit value.",
+      subtitle: `${result.label} operating case`,
+      body: summaryTable([
+        ["Net profit", currency.format(result.netProfit)],
+        ["Used in DSCR", "Yes"],
+        ["Used in exit value", "Yes"],
+      ]),
+    },
+    royaltyRemainingCap: {
+      title: "Royalty Remaining Cap",
+      tooltip: "Amount still collectible before the royalty repayment ceiling is hit.",
+      subtitle: `${result.label} case`,
+      body: buildRoyaltyCapBody(state, result),
+    },
+  };
+
+  return (
+    detailMap[fieldKey] || {
+      title: "Metric detail",
+      tooltip: "Click to inspect the supporting math.",
+      subtitle: result.label,
+      body: "<p class=\"drawer-empty\">This metric does not have a custom detail card yet.</p>",
+    }
+  );
+}
+
+function openDetail(fieldKey, caseKey) {
+  currentDetail = { fieldKey, caseKey };
+  const meta = getMetricMeta(fieldKey, caseKey);
+  drawerTitle.textContent = meta.title;
+  drawerSubtitle.textContent = meta.subtitle;
+  drawerBody.innerHTML = meta.body;
+  detailDrawer.classList.add("is-open");
+  detailDrawer.setAttribute("aria-hidden", "false");
+  drawerBackdrop.hidden = false;
+  document.body.classList.add("drawer-open");
+}
+
+function closeDetail() {
+  currentDetail = null;
+  detailDrawer.classList.remove("is-open");
+  detailDrawer.setAttribute("aria-hidden", "true");
+  drawerBackdrop.hidden = true;
+  document.body.classList.remove("drawer-open");
+}
+
 function renderKpis(inputs, selectedResult, summary) {
   const items = [
     {
+      fieldKey: "yearOneObligations",
       label: "Year 1 Obligations",
       value: currency.format(selectedResult.yearOneObligations),
       note: `${selectedResult.label} case`,
     },
     {
+      fieldKey: "dscr",
       label: "DSCR",
-      value:
-        Number.isFinite(selectedResult.dscrYearOne)
-          ? `${numberOne.format(selectedResult.dscrYearOne)}x`
-          : "n/a",
+      value: formatDscr(selectedResult.dscrYearOne),
       note: `Target ${numberOne.format(inputs.targetDscr)}x`,
     },
     {
+      fieldKey: "buyerIrr",
       label: "Buyer IRR",
-      value: selectedResult.irr === null ? "n/a" : percentOne.format(selectedResult.irr),
+      value: formatIrr(selectedResult.irr),
       note: `${inputs.holdPeriodYears}-year hold`,
     },
     {
+      fieldKey: "payback",
       label: "Payback",
-      value: selectedResult.payback === null ? "Beyond hold" : `${selectedResult.payback} yrs`,
+      value: formatPayback(selectedResult.payback),
       note: "Buyer equity recovery",
     },
     {
+      fieldKey: "exitEquity",
       label: "Exit Equity",
       value: currency.format(selectedResult.exitEquityValue),
       note: `Exit at ${numberOne.format(inputs.exitMultiple)}x NP`,
     },
     {
+      fieldKey: "fundingGap",
       label: "Funding Gap",
       value:
         summary.fundingGap >= 0
@@ -597,8 +1189,11 @@ function renderKpis(inputs, selectedResult, summary) {
     .map(
       (item) => `
         <article class="kpi-card">
-          <span>${item.label}</span>
-          <strong>${item.value}</strong>
+          <div class="metric-label-row">
+            <span>${item.label}</span>
+            ${infoButton(item.fieldKey, inputs.selectedCase)}
+          </div>
+          ${clickableValue(`<strong>${item.value}</strong>`, item.fieldKey, inputs.selectedCase)}
           <small>${item.note}</small>
         </article>
       `,
@@ -613,49 +1208,56 @@ function renderResultsTable(inputs, selectedResult, summary) {
     "The structure is judged first on whether the buyer can carry the obligations under the selected operating case, then on how quickly your paper gets taken out.";
 
   const rows = [
-    ["Purchase price", currency.format(inputs.purchasePrice)],
-    ["Buyer down payment", currency.format(inputs.downPaymentAmount)],
-    ["Cash required at close", currency.format(summary.cashNeededAtClose)],
-    ["Total close sources", currency.format(summary.closeSources)],
-    ["Seller note principal", currency.format(inputs.tranches.seller.enabled ? inputs.tranches.seller.amount : 0)],
-    ["Royalty advance", currency.format(inputs.royalty.enabled ? inputs.royalty.advanceAmount : 0)],
-    ["Royalty repayment cap", inputs.royalty.enabled ? `${numberOne.format(inputs.royalty.capMultiple)}x` : "Off"],
-    ["Earnout", currency.format(inputs.earnout.enabled ? inputs.earnout.amount : 0)],
-    ["Year 1 debt service", currency.format(summary.yearOneDebt)],
-    ["Year 1 royalty burden", currency.format(summary.yearOneRoyalty)],
-    ["Peak annual obligations", currency.format(selectedResult.peakAnnualObligations)],
-    ["Year 1 DSCR", Number.isFinite(selectedResult.dscrYearOne) ? `${numberOne.format(selectedResult.dscrYearOne)}x` : "n/a"],
-    ["Buyer IRR", selectedResult.irr === null ? "n/a" : percentOne.format(selectedResult.irr)],
-    ["Payback period", selectedResult.payback === null ? "Beyond hold" : `${selectedResult.payback} years`],
-    ["Exit value assumption", currency.format(selectedResult.exitValue)],
-    ["Debt outstanding at exit", currency.format(selectedResult.remainingDebt)],
-    ["Buyer exit equity", currency.format(selectedResult.exitEquityValue)],
+    ["purchasePrice", "Purchase price", currency.format(inputs.purchasePrice)],
+    ["buyerDownPayment", "Buyer down payment", currency.format(inputs.downPaymentAmount)],
+    ["cashNeededAtClose", "Cash required at close", currency.format(summary.cashNeededAtClose)],
+    ["closeSources", "Total close sources", currency.format(summary.closeSources)],
+    ["sellerNotePrincipal", "Seller note principal", currency.format(inputs.tranches.seller.enabled ? inputs.tranches.seller.amount : 0)],
+    ["royaltyAdvance", "Royalty advance", currency.format(inputs.royalty.enabled ? inputs.royalty.advanceAmount : 0)],
+    ["royaltyRepaymentCap", "Royalty repayment cap", inputs.royalty.enabled ? `${numberOne.format(inputs.royalty.capMultiple)}x` : "Off"],
+    ["earnout", "Earnout", currency.format(inputs.earnout.enabled ? inputs.earnout.amount : 0)],
+    ["yearOneDebtService", "Year 1 debt service", currency.format(summary.yearOneDebt)],
+    ["yearOneRoyaltyBurden", "Year 1 royalty burden", currency.format(summary.yearOneRoyalty)],
+    ["peakAnnualObligations", "Peak annual obligations", currency.format(selectedResult.peakAnnualObligations)],
+    ["dscr", "Year 1 DSCR", formatDscr(selectedResult.dscrYearOne)],
+    ["buyerIrr", "Buyer IRR", formatIrr(selectedResult.irr)],
+    ["payback", "Payback period", selectedResult.payback === null ? "Beyond hold" : `${selectedResult.payback} years`],
+    ["exitValueAssumption", "Exit value assumption", currency.format(selectedResult.exitValue)],
+    ["debtOutstandingAtExit", "Debt outstanding at exit", currency.format(selectedResult.remainingDebt)],
+    ["exitEquity", "Buyer exit equity", currency.format(selectedResult.exitEquityValue)],
   ];
 
   resultsTable.innerHTML = rows
-    .map(([label, value]) => `<tr><td>${label}</td><td>${value}</td></tr>`)
+    .map(
+      ([fieldKey, label, value]) => `
+        <tr>
+          <td><div class="metric-label-row"><span>${label}</span>${infoButton(fieldKey, inputs.selectedCase)}</div></td>
+          <td>${clickableValue(value, fieldKey, inputs.selectedCase)}</td>
+        </tr>
+      `,
+    )
     .join("");
 }
 
 function renderStressTable(results) {
   const rows = [
-    ["Gross revenue", (result) => currency.format(result.grossRevenue)],
-    ["Net profit", (result) => currency.format(result.netProfit)],
-    ["Year 1 obligations", (result) => currency.format(result.yearOneObligations)],
-    ["Peak annual obligations", (result) => currency.format(result.peakAnnualObligations)],
-    ["DSCR", (result) => (Number.isFinite(result.dscrYearOne) ? `${numberOne.format(result.dscrYearOne)}x` : "n/a")],
-    ["Buyer IRR", (result) => (result.irr === null ? "n/a" : percentOne.format(result.irr))],
-    ["Payback", (result) => (result.payback === null ? "Beyond hold" : `${result.payback} yrs`)],
-    ["Exit equity", (result) => currency.format(result.exitEquityValue)],
-    ["Royalty remaining cap", (result) => currency.format(result.royaltySchedule.remainingCap)],
+    ["grossRevenue", "Gross revenue", (result) => currency.format(result.grossRevenue)],
+    ["netProfit", "Net profit", (result) => currency.format(result.netProfit)],
+    ["yearOneObligations", "Year 1 obligations", (result) => currency.format(result.yearOneObligations)],
+    ["peakAnnualObligations", "Peak annual obligations", (result) => currency.format(result.peakAnnualObligations)],
+    ["dscr", "DSCR", (result) => formatDscr(result.dscrYearOne)],
+    ["buyerIrr", "Buyer IRR", (result) => formatIrr(result.irr)],
+    ["payback", "Payback", (result) => formatPayback(result.payback)],
+    ["exitEquity", "Exit equity", (result) => currency.format(result.exitEquityValue)],
+    ["royaltyRemainingCap", "Royalty remaining cap", (result) => currency.format(result.royaltySchedule.remainingCap)],
   ];
 
   stressTable.innerHTML = rows
     .map(
-      ([label, formatter]) => `
+      ([fieldKey, label, formatter]) => `
         <tr>
-          <td>${label}</td>
-          ${CASE_KEYS.map((key) => `<td>${formatter(results[key])}</td>`).join("")}
+          <td><div class="metric-label-row"><span>${label}</span>${infoButton(fieldKey, currentRenderState.inputs.selectedCase)}</div></td>
+          ${CASE_KEYS.map((key) => `<td>${clickableValue(formatter(results[key]), fieldKey, key)}</td>`).join("")}
         </tr>
       `,
     )
@@ -708,14 +1310,43 @@ function render() {
   const selectedResult = results[inputs.selectedCase];
   const summary = buildSummary(inputs, selectedResult);
 
+  currentRenderState = {
+    inputs,
+    results,
+    selectedResult,
+    summary,
+  };
+
   renderKpis(inputs, selectedResult, summary);
   renderResultsTable(inputs, selectedResult, summary);
   renderStressTable(results);
   renderConstraintSummary(inputs, results, summary);
   renderWarnings(inputs, results, summary);
+
+  if (currentDetail) {
+    openDetail(currentDetail.fieldKey, currentDetail.caseKey);
+  }
 }
 
 form.addEventListener("input", render);
+form.addEventListener("click", (event) => {
+  const target = event.target.closest("[data-open-detail]");
+  if (!target) {
+    return;
+  }
+
+  openDetail(target.dataset.openDetail, target.dataset.case || undefined);
+});
+
+document.addEventListener("click", (event) => {
+  const target = event.target.closest("[data-open-detail]");
+  if (!target || form.contains(target)) {
+    return;
+  }
+
+  openDetail(target.dataset.openDetail, target.dataset.case || undefined);
+});
+
 amountInputs.forEach((input) => {
   input.addEventListener("focus", () => {
     input.value = input.value.replace(/,/g, "");
@@ -726,8 +1357,17 @@ amountInputs.forEach((input) => {
     render();
   });
 });
+
 presetButtons.forEach((button) => {
   button.addEventListener("click", () => applyPreset(button.dataset.preset));
+});
+
+drawerClose.addEventListener("click", closeDetail);
+drawerBackdrop.addEventListener("click", closeDetail);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeDetail();
+  }
 });
 
 formatAmountInputs();
