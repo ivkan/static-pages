@@ -213,6 +213,62 @@ select:focus {
   gap: 10px;
 }
 
+.scenario-save-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.scenario-name-label {
+  display: grid;
+  gap: 8px;
+}
+
+.scenario-status,
+.saved-scenario-date {
+  font-family: "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.saved-scenarios {
+  display: grid;
+  gap: 10px;
+}
+
+.saved-scenario-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.saved-scenario-card.is-active {
+  border-color: rgba(13, 109, 99, 0.35);
+  box-shadow: 0 12px 24px rgba(13, 109, 99, 0.08);
+}
+
+.saved-scenario-name {
+  margin: 0 0 4px;
+  font-family: "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+  font-weight: 700;
+}
+
+.saved-scenario-date {
+  margin: 0;
+}
+
+.saved-scenario-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .preset-button {
   border: 1px solid rgba(13, 109, 99, 0.24);
   border-radius: 999px;
@@ -224,6 +280,22 @@ select:focus {
 
 .preset-button:hover {
   background: rgba(13, 109, 99, 0.14);
+}
+
+.save-button,
+.tiny-button {
+  white-space: nowrap;
+}
+
+.tiny-button {
+  padding: 8px 12px;
+  font-size: 0.86rem;
+}
+
+.muted-button {
+  color: #7a4a2b;
+  border-color: rgba(122, 74, 43, 0.22);
+  background: rgba(122, 74, 43, 0.08);
 }
 
 .block-card {
@@ -531,6 +603,15 @@ td:last-child {
   .block-grid,
   .kpi-grid {
     grid-template-columns: 1fr;
+  }
+
+  .scenario-save-row {
+    grid-template-columns: 1fr;
+  }
+
+  .saved-scenario-card {
+    align-items: start;
+    display: grid;
   }
 
   .section-row {

@@ -39,10 +39,19 @@ const drawerClose = document.querySelector("#drawerClose");
 const drawerTitle = document.querySelector("#drawerTitle");
 const drawerSubtitle = document.querySelector("#drawerSubtitle");
 const drawerBody = document.querySelector("#drawerBody");
+const scenarioNameInput = document.querySelector("#scenarioName");
+const saveScenarioButton = document.querySelector("#saveScenarioButton");
+const savedScenarios = document.querySelector("#savedScenarios");
+const scenarioStatus = document.querySelector("#scenarioStatus");
 
 const CASE_KEYS = ["low", "plausible", "great"];
 let currentRenderState = null;
 let currentDetail = null;
+let savedScenarioState = {
+  scenarios: [],
+  activeId: null,
+};
+const SCENARIO_STORAGE_KEY = "seller-finance-deal-studio-scenarios";
 
 const PRESETS = {
   sellerCarry: {
@@ -233,6 +242,157 @@ function formatAmountInputs() {
 
     input.value = formatAmount(input.value);
   });
+}
+
+function getSerializableFormState() {
+  const elements = Array.from(form.elements).filter((element) => element.name);
+  return Object.fromEntries(
+    elements.map((element) => [
+      element.name,
+      element.type === "checkbox" ? element.checked : element.value,
+    ]),
+  );
+}
+
+function applyFormState(state) {
+  Object.entries(state || {}).forEach(([name, value]) => {
+    const field = formValue(name);
+    if (!field) {
+      return;
+    }
+
+    if (field.type === "checkbox") {
+      field.checked = Boolean(value);
+    } else {
+      field.value = String(value);
+    }
+  });
+
+  formatAmountInputs();
+  render();
+}
+
+function loadSavedScenarios() {
+  try {
+    const raw = localStorage.getItem(SCENARIO_STORAGE_KEY);
+    if (!raw) {
+      return { scenarios: [], activeId: null };
+    }
+
+    const parsed = JSON.parse(raw);
+    return {
+      scenarios: Array.isArray(parsed.scenarios) ? parsed.scenarios : [],
+      activeId: parsed.activeId || null,
+    };
+  } catch (error) {
+    return { scenarios: [], activeId: null };
+  }
+}
+
+function persistSavedScenarios() {
+  localStorage.setItem(SCENARIO_STORAGE_KEY, JSON.stringify(savedScenarioState));
+}
+
+function setScenarioStatus(message) {
+  scenarioStatus.textContent = message;
+}
+
+function renderSavedScenarios() {
+  if (!savedScenarioState.scenarios.length) {
+    savedScenarios.innerHTML = "";
+    setScenarioStatus("No saved scenarios yet.");
+    return;
+  }
+
+  const activeScenario = savedScenarioState.scenarios.find(
+    (scenario) => scenario.id === savedScenarioState.activeId,
+  );
+  setScenarioStatus(
+    activeScenario
+      ? `Active scenario: ${activeScenario.name}`
+      : `${savedScenarioState.scenarios.length} saved scenarios`,
+  );
+
+  savedScenarios.innerHTML = savedScenarioState.scenarios
+    .map(
+      (scenario) => `
+        <article class="saved-scenario-card ${scenario.id === savedScenarioState.activeId ? "is-active" : ""}">
+          <div>
+            <p class="saved-scenario-name">${escapeHtml(scenario.name)}</p>
+            <p class="saved-scenario-date">Saved ${new Date(scenario.updatedAt).toLocaleString()}</p>
+          </div>
+          <div class="saved-scenario-actions">
+            <button type="button" class="preset-button tiny-button" data-load-scenario="${scenario.id}">Load</button>
+            <button type="button" class="preset-button tiny-button muted-button" data-delete-scenario="${scenario.id}">Delete</button>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function saveScenario() {
+  const name = scenarioNameInput.value.trim();
+  if (!name) {
+    setScenarioStatus("Give the scenario a name before saving it.");
+    scenarioNameInput.focus();
+    return;
+  }
+
+  const existing = savedScenarioState.scenarios.find((scenario) => scenario.name === name);
+  const now = new Date().toISOString();
+  const snapshot = getSerializableFormState();
+
+  if (existing) {
+    existing.state = snapshot;
+    existing.updatedAt = now;
+    savedScenarioState.activeId = existing.id;
+    setScenarioStatus(`Updated scenario: ${name}`);
+  } else {
+    const scenario = {
+      id: crypto.randomUUID(),
+      name,
+      state: snapshot,
+      updatedAt: now,
+    };
+    savedScenarioState.scenarios.unshift(scenario);
+    savedScenarioState.activeId = scenario.id;
+    setScenarioStatus(`Saved scenario: ${name}`);
+  }
+
+  persistSavedScenarios();
+  renderSavedScenarios();
+}
+
+function loadScenario(id) {
+  const scenario = savedScenarioState.scenarios.find((entry) => entry.id === id);
+  if (!scenario) {
+    setScenarioStatus("That saved scenario could not be found.");
+    return;
+  }
+
+  savedScenarioState.activeId = scenario.id;
+  scenarioNameInput.value = scenario.name;
+  persistSavedScenarios();
+  applyFormState(scenario.state);
+  renderSavedScenarios();
+  setScenarioStatus(`Loaded scenario: ${scenario.name}`);
+}
+
+function deleteScenario(id) {
+  const scenario = savedScenarioState.scenarios.find((entry) => entry.id === id);
+  savedScenarioState.scenarios = savedScenarioState.scenarios.filter(
+    (entry) => entry.id !== id,
+  );
+  if (savedScenarioState.activeId === id) {
+    savedScenarioState.activeId = null;
+  }
+
+  persistSavedScenarios();
+  renderSavedScenarios();
+  setScenarioStatus(
+    scenario ? `Deleted scenario: ${scenario.name}` : "Saved scenario deleted.",
+  );
 }
 
 function monthlyPayment(principal, monthlyRate, months) {
@@ -1371,4 +1531,32 @@ document.addEventListener("keydown", (event) => {
 });
 
 formatAmountInputs();
-render();
+savedScenarioState = loadSavedScenarios();
+renderSavedScenarios();
+if (savedScenarioState.activeId) {
+  const activeScenario = savedScenarioState.scenarios.find(
+    (scenario) => scenario.id === savedScenarioState.activeId,
+  );
+  if (activeScenario) {
+    scenarioNameInput.value = activeScenario.name;
+    applyFormState(activeScenario.state);
+  } else {
+    render();
+  }
+} else {
+  render();
+}
+
+saveScenarioButton.addEventListener("click", saveScenario);
+savedScenarios.addEventListener("click", (event) => {
+  const loadButton = event.target.closest("[data-load-scenario]");
+  if (loadButton) {
+    loadScenario(loadButton.dataset.loadScenario);
+    return;
+  }
+
+  const deleteButton = event.target.closest("[data-delete-scenario]");
+  if (deleteButton) {
+    deleteScenario(deleteButton.dataset.deleteScenario);
+  }
+});

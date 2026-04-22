@@ -118,6 +118,22 @@
 
             <div class="section-block">
               <div class="section-row">
+                <h3>Saved Scenarios</h3>
+                <p class="mini-note">Save a named structure and recall it later.</p>
+              </div>
+              <div class="scenario-save-row">
+                <label class="scenario-name-label">
+                  <span>Scenario name</span>
+                  <input type="text" id="scenarioName" name="scenarioName" placeholder="Example: Buyer v3 - royalty bridge" />
+                </label>
+                <button type="button" class="preset-button save-button" id="saveScenarioButton">Save Scenario</button>
+              </div>
+              <div class="scenario-status" id="scenarioStatus">No saved scenarios yet.</div>
+              <div class="saved-scenarios" id="savedScenarios"></div>
+            </div>
+
+            <div class="section-block">
+              <div class="section-row">
                 <h3>Financing Blocks</h3>
                 <p class="mini-note">Toggle any tranche on or off.</p>
               </div>
