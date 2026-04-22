@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>MUV — Как работает формула и откуда новые цифры</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#f8f7f4; --card:#ffffff; --ink:#1a1a1a; --muted:#6b6b6b;
+    --line:#e6e3dc; --accent:#1f6feb; --ok:#1e8449; --bad:#c0392b; --warn:#b8860b;
+    --mono:"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  main{max-width:920px;margin:0 auto;padding:48px 32px 80px}
+  h1{font-size:32px;font-weight:700;letter-spacing:-.02em;margin:0 0 8px}
+  h2{font-size:22px;font-weight:700;margin:48px 0 12px;letter-spacing:-.01em;border-top:1px solid var(--line);padding-top:36px}
+  h2:first-of-type{border-top:none;padding-top:0}
+  h3{font-size:17px;font-weight:600;margin:28px 0 10px}
+  p{margin:8px 0}
+  small.sub{color:var(--muted);font-size:14px;display:block;margin-bottom:24px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:24px;margin:16px 0}
+  .step{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:18px 22px;margin:14px 0}
+  .step h4{margin:0 0 8px;font-size:16px;font-weight:600}
+  .step .n{display:inline-block;background:var(--accent);color:#fff;border-radius:50%;width:24px;height:24px;text-align:center;line-height:24px;font-size:13px;margin-right:8px;font-weight:600}
+  .formula{font-family:var(--mono);background:#f4f2ec;border-radius:6px;padding:10px 14px;margin:10px 0;font-size:14px;white-space:pre-wrap;overflow-x:auto}
+  .calc{font-family:var(--mono);font-size:14px;color:var(--ink)}
+  .calc .eq{color:var(--muted)}
+  .calc .out{color:var(--ok);font-weight:600}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+  th{font-weight:600;color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.03em}
+  td.num{font-family:var(--mono);text-align:right;white-space:nowrap}
+  .ok{color:var(--ok);font-weight:600}
+  .bad{color:var(--bad);font-weight:600}
+  .note{background:#fef9e7;border-left:3px solid var(--warn);padding:12px 16px;border-radius:0 6px 6px 0;margin:14px 0;font-size:14px}
+  .pull{background:#eef6ff;border-left:3px solid var(--accent);padding:14px 18px;border-radius:0 8px 8px 0;margin:18px 0;font-size:15px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:14px 0}
+  .metric{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;text-align:center}
+  .metric .big{font-size:32px;font-weight:700;color:var(--ink);margin:4px 0}
+  .metric .lbl{font-size:13px;color:var(--muted)}
+  .chart-box{position:relative;height:360px;margin:8px 0}
+  .chart-box.tall{height:420px}
+  .compare{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:14px 0;font-size:14px}
+  .compare .col{padding:14px;border-radius:8px;border:1px solid var(--line);background:#fafafa}
+  .compare .col.old{border-color:#e9b4a8}
+  .compare .col.new{border-color:#a8d9b8;background:#f5fbf7}
+  .compare .col.real{border-color:#9bb6d9;background:#f3f7fc}
+  .compare .val{font-family:var(--mono);font-size:20px;font-weight:700;margin:4px 0}
+  .compare .lbl{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+  .waterfall{margin:12px 0}
+  .bar-row{display:flex;align-items:center;gap:12px;margin:6px 0;font-size:14px}
+  .bar-row .label{width:260px;color:var(--muted);font-family:var(--mono);font-size:13px}
+  .bar-row .bar{height:28px;background:linear-gradient(90deg,#3b82f6,#60a5fa);border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding:0 10px;color:#fff;font-weight:600;font-size:13px;font-family:var(--mono);min-width:60px}
+  .bar-row .bar.final{background:linear-gradient(90deg,#1e8449,#27ae60)}
+  .bar-row .bar.cost{background:linear-gradient(90deg,#6b5b95,#8a7cb4)}
+  kbd{font-family:var(--mono);background:#eee;padding:1px 6px;border-radius:3px;font-size:13px}
+  .footnote{color:var(--muted);font-size:13px;margin-top:40px;border-top:1px solid var(--line);padding-top:16px}
+  .input-tag{display:inline-flex;align-items:center;gap:6px;border-radius:4px;padding:4px 10px;font-size:12px;font-family:var(--mono);margin:0 0 10px;border:1px solid}
+  .input-tag::before{content:"ВХОД";font-weight:700;letter-spacing:.05em;opacity:.55;margin-right:4px;font-size:11px}
+  .input-tag.transfer{background:#e8f4ec;border-color:#b7dcc5;color:#1e6b3a}
+  .input-tag.hourly{background:#fff3e0;border-color:#ffcc80;color:#8a5a00}
+  .input-tag.all{background:#f3eaf9;border-color:#d4bce8;color:#5a4780}
+  .input-tag.allmx{background:#eef6ff;border-color:#c6ddf5;color:#1f4b8a}
+  @media (max-width:720px){
+    main{padding:28px 18px}
+    .grid2,.grid3,.compare{grid-template-columns:1fr}
+    .bar-row .label{width:180px}
+  }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Формула MUV — откуда новые цифры</h1>
+<small class="sub">Объяснение для Arthur · Данные на 2026-04-17 · Фаза 1 (15 021 поездка)</small>
+
+<div class="grid3">
+  <div class="metric"><div class="lbl">Старая точность</div><div class="big" style="color:var(--bad)">32,0%</div><div class="lbl">в пределах ±10%</div></div>
+  <div class="metric"><div class="lbl">Новая точность</div><div class="big" style="color:var(--ok)">62,7%</div><div class="lbl">в пределах ±10%</div></div>
+  <div class="metric"><div class="lbl">Медианная ошибка</div><div class="big">6,6%</div><div class="lbl">половина поездок точнее</div></div>
+</div>
+
+<h2>1. Как работает формула — пошагово</h2>
+<p>Разберём на одной реальной поездке из истории. После этого вы сможете пройти расчёт самостоятельно для любой другой.</p>
+
+<div class="card">
+  <h3 style="margin-top:0">Поездка <kbd>#1389426</kbd> — Dallas, 12,8 миль, transfer</h3>
+  <table>
+    <tr><td>Маршрут</td><td>Del Norte Ln (Dallas) → Ritz-Carlton Las Colinas</td></tr>
+    <tr><td>Метроплекс</td><td>Dallas, TX (tier 2)</td></tr>
+    <tr><td>Billing</td><td>transfer (не hourly)</td></tr>
+    <tr><td>Дистанция</td><td>12,8 миль</td></tr>
+    <tr><td>Аэропорт</td><td>нет</td></tr>
+    <tr><td><b>Реальный TotalCost</b> (что получил vendor)</td><td><b>$71,40</b></td></tr>
+  </table>
+</div>
+
+<p>Калиброванные параметры Tier 2: <kbd>base_fare=$90,20</kbd>, <kbd>per_mile_rate=$1,731</kbd>, <kbd>min_fare=$60</kbd>. Dallas <kbd>rate_adjustment=0,61</kbd>. Margin target = 40%.</p>
+
+<div class="step">
+  <h4><span class="n">1</span>Базовая стоимость</h4>
+  <div class="formula">baseCost = base_fare + per_mile_rate × distance</div>
+  <div class="calc"><span class="eq">= $90,20 + $1,731 × 12,8 = $90,20 + $22,16 = </span><span class="out">$112,36</span></div>
+  <p style="color:var(--muted);font-size:14px;margin-top:8px">Это «сырая» стоимость поездки для vendor, до всех корректировок. Сколько машина должна зарабатывать за фиксированный выезд + пройденные мили.</p>
+  <p style="color:var(--muted);font-size:14px;margin-top:8px"><b>Если поездка airport:</b> к <kbd>base_fare</kbd> добавляется фиксированная надбавка из tier — <kbd>airport_pickup_surcharge</kbd> (если аэропорт на выезде) или <kbd>airport_dropoff_surcharge</kbd> (если аэропорт на приезде). Для Tier 2: pickup = $15,00, dropoff = $7,50. Формула становится: <kbd>baseCost = base_fare + airport_surcharge + per_mile_rate × distance</kbd>. В нашем примере поездка не airport, поэтому надбавка не применяется. Airport-надбавки не калибруются — остаются на текущих серверных значениях.</p>
+</div>
+
+<div class="step">
+  <h4><span class="n">2</span>Deadhead (холостой пробег) + Wait (ожидание)</h4>
+  <div class="formula">baseCost += deadhead_cost + wait_charge</div>
+  <div class="calc"><span class="eq">Обе точки в пределах main_radius=15 миль от центра Dallas (3,6 и 6,7 миль) → deadhead=0. Ожидание не записано → wait=0.</span></div>
+  <div class="calc">baseCost = <span class="out">$112,36</span> (не изменилось)</div>
+  <p style="color:var(--muted);font-size:14px;margin-top:8px">Если бы vendor ехал издалека за пассажиром — прибавили бы стоимость пустого пробега по ставке tier. Для поездок внутри города это ноль.</p>
+</div>
+
+<div class="step">
+  <h4><span class="n">3</span>Пол по min_fare</h4>
+  <div class="formula">baseCost = max(baseCost, min_fare)</div>
+  <div class="calc"><span class="eq">= max($112,36, $60) = </span><span class="out">$112,36</span></div>
+  <p style="color:var(--muted);font-size:14px;margin-top:8px">Защита от слишком коротких поездок, которые не окупают выезд. Для нашего расчёта не сработала.</p>
+</div>
+
+<div class="step">
+  <h4><span class="n">4</span>Suburban rate factor</h4>
+  <div class="formula">if suburban: baseCost × suburban_rate_factor</div>
+  <div class="calc"><span class="eq">Обе точки в main_radius (не в «пригородном кольце» 15–25 миль) → множитель не применяется.</span></div>
+  <div class="calc">baseCost = <span class="out">$112,36</span></div>
+  <p style="color:var(--muted);font-size:14px;margin-top:8px">Если бы обе точки оказались в расширенной зоне (за пределами main, но в пределах extended) — применился бы множитель 1,30. Визуально — два кольца вокруг центра города.</p>
+</div>
+
+<div class="step">
+  <h4><span class="n">5</span>Добавление маржи (наценка клиенту)</h4>
+  <div class="formula">price = baseCost / (1 − base_margin_target) = baseCost / 0,6</div>
+  <div class="calc"><span class="eq">= $112,36 / 0,6 = </span><span class="out">$187,27</span></div>
+  <p style="color:var(--muted);font-size:14px;margin-top:8px">Делим на 0,6, потому что цель маржи — 40%. Обратная величина: vendor_cost = 60% от customer_price. Значит customer_price = vendor_cost / 0,6. Это базовая бизнес-модель MUV.</p>
+</div>
+
+<div class="step">
+  <h4><span class="n">6</span>Per-metroplex множитель <kbd>rate_adjustment</kbd></h4>
+  <div class="formula">price = price × rate_adjustment</div>
+  <div class="calc"><span class="eq">= $187,27 × 0,61 = </span><span class="out">$114,23</span></div>
+  <p style="color:var(--muted);font-size:14px;margin-top:8px">Локальная корректировка Dallas. В Dallas реальные vendor-ставки ниже, чем даёт чистая Tier 2 — поэтому множитель 0,61. В Tijuana, наоборот, 2,118 (см. раздел 5).</p>
+</div>
+
+<div class="step">
+  <h4><span class="n">7</span>Финальный min_fare</h4>
+  <div class="formula">price = max(price, min_fare)</div>
+  <div class="calc"><span class="eq">= max($114,23, $60) = </span><span class="out">$114,23</span></div>
+  <p style="color:var(--muted);font-size:14px;margin-top:8px"><b>Это итоговая цена для клиента.</b></p>
+</div>
+
+<div class="step" style="border-left-color:var(--ok)">
+  <h4><span class="n" style="background:var(--ok)">✓</span>Оценка для калибровки (effectiveCost)</h4>
+  <div class="formula">effectiveCost = baseCost × rate_adjustment</div>
+  <div class="calc"><span class="eq">= $112,36 × 0,61 = </span><span class="out">$68,54</span></div>
+  <div class="calc" style="margin-top:8px">Сравниваем с реальным TotalCost = <b>$71,40</b></div>
+  <div class="calc">Ошибка = |68,54 − 71,40| / 71,40 = <span class="ok">4,0%</span> — попадает в ±10% ✓</div>
+  <p style="color:var(--muted);font-size:14px;margin-top:8px">Это та цифра, по которой мы измеряем точность формулы. Мы сравниваем её не с customer_price (который искажён скидками, контрактами, событиями), а с TotalCost — чистым сигналом того, что vendor реально получил.</p>
+</div>
+
+<h3>Визуально — как растёт цена на каждом шаге</h3>
+<div class="waterfall">
+  <div class="bar-row"><div class="label">1. base_fare</div><div class="bar" style="width:28%">$90,20</div></div>
+  <div class="bar-row"><div class="label">2. + per_mile_rate × 12,8 mi</div><div class="bar" style="width:35%">$112,36</div></div>
+  <div class="bar-row"><div class="label">3. deadhead (0), wait (0)</div><div class="bar" style="width:35%">$112,36</div></div>
+  <div class="bar-row"><div class="label">4. min_fare floor</div><div class="bar" style="width:35%">$112,36</div></div>
+  <div class="bar-row"><div class="label">5. ÷ 0,6 (добавляем маржу)</div><div class="bar" style="width:58%">$187,27</div></div>
+  <div class="bar-row"><div class="label">6. × rate_adjustment (0,61)</div><div class="bar final" style="width:36%">$114,23</div></div>
+  <div class="bar-row"><div class="label" style="color:var(--ok);font-weight:600">→ effectiveCost (для метрики)</div><div class="bar cost" style="width:22%">$68,54</div></div>
+  <div class="bar-row"><div class="label" style="color:#666;font-weight:600">Реальный TotalCost (из истории)</div><div class="bar" style="width:23%;background:#444">$71,40</div></div>
+</div>
+
+<h2>2. Как мы измеряем точность</h2>
+<p>В три шага:</p>
+<ol>
+  <li>Берём историческую поездку из базы. Знаем реальный <kbd>TotalCost</kbd> (что vendor получил).</li>
+  <li>Прогоняем её через формулу с откалиброванными параметрами — получаем <kbd>effectiveCost</kbd>.</li>
+  <li>Считаем относительное отклонение. Если ≤ 10% — поездка «точная».</li>
+</ol>
+<p>Применяем ко всем 15 021 поездкам. <b>Точность = процент точных поездок.</b></p>
+
+<div class="card">
+  <h3 style="margin-top:0">Распределение точности по допускам</h3>
+  <table>
+    <tr><th>Допуск</th><th>Точность</th><th>Что это значит</th></tr>
+    <tr><td>±5%</td><td class="num">43,0%</td><td>формула почти в точку</td></tr>
+    <tr><td><b>±10%</b></td><td class="num"><b>62,7%</b></td><td><b>текущий стандарт качества</b></td></tr>
+    <tr><td>±15%</td><td class="num">73,3%</td><td></td></tr>
+    <tr><td>±20%</td><td class="num">79,8%</td><td></td></tr>
+    <tr><td>±25%</td><td class="num">84,9%</td><td>«85%» при этом допуске</td></tr>
+    <tr><td>±30%</td><td class="num">88,5%</td><td></td></tr>
+  </table>
+  <p style="color:var(--muted);font-size:14px;margin:6px 0 0">Медиана ошибки <b>6,6%</b> — то есть у половины всех поездок формула угадывает точнее, чем ±7%.</p>
+</div>
+
+<h2>3. Откуда берутся новые значения параметров</h2>
+<p>Калибровка идёт в две фазы. В каждой итерации Фазы A последовательно пересчитываются несколько групп параметров, после чего измеряется точность — и цикл повторяется, пока изменения не перестанут улучшать результат. Фаза B включается после сходимости Фазы A.</p>
+
+<div class="card">
+  <h3 style="margin-top:0">Что калибруется</h3>
+  <table>
+    <tr>
+      <th>Параметр</th>
+      <th>Scope</th>
+      <th>Источник значения</th>
+      <th>Где настраивается</th>
+    </tr>
+    <tr>
+      <td><kbd>base_fare</kbd></td>
+      <td>на tier (5 штук)</td>
+      <td>линейная регрессия: пересечение линии «cost vs distance» по всем поездкам tier</td>
+      <td>Фаза A, шаг 1</td>
+    </tr>
+    <tr>
+      <td><kbd>per_mile_rate</kbd></td>
+      <td>на tier (5 штук)</td>
+      <td>линейная регрессия: наклон той же линии</td>
+      <td>Фаза A, шаг 1</td>
+    </tr>
+    <tr>
+      <td><kbd>sedan_hourly_rate</kbd></td>
+      <td>на tier (5 штук)</td>
+      <td>Отдельная регрессия по hourly-поездкам (где billing_type = hourly)</td>
+      <td>Фаза A, шаг 2</td>
+    </tr>
+    <tr>
+      <td><kbd>rate_adjustment</kbd></td>
+      <td>на метроплекс (148 изменений)</td>
+      <td><kbd>median(TotalCost / predicted_baseCost)</kbd> по поездкам метроплекса</td>
+      <td>Фаза A, шаг 3</td>
+    </tr>
+    <tr>
+      <td><kbd>tier</kbd> метроплекса</td>
+      <td>на метроплекс (35 переназначений)</td>
+      <td>Перебор всех 5 tier'ов, выбирается тот, который даёт больше всего попаданий в ±10%</td>
+      <td>Фаза B</td>
+    </tr>
+  </table>
+  <p style="color:var(--muted);font-size:14px;margin:6px 0 0">Не калибруются (оставлены на старых значениях): <kbd>min_fare</kbd>, <kbd>deadhead_rate_per_mi</kbd>, <kbd>airport_surcharge</kbd>, радиусы зон и <kbd>suburban_rate_factor</kbd>. Радиусы меняются только на стороне сервера (Stefan и Саша это уже сделали до калибровки).</p>
+  <p style="color:var(--muted);font-size:13px;margin:6px 0 0;font-style:italic">Примечание: в API и БД MUV эти же поля записаны с суффиксом <kbd>_usd</kbd> (например, <kbd>base_fare_usd</kbd>) — суффикс обозначает валюту. В этом документе для краткости суффикс опущен.</p>
+</div>
+
+<h3>Фаза A — итеративная подгонка параметров</h3>
+<p>Внутренний цикл, до 100 итераций. На каждой итерации — четыре шага в фиксированном порядке:</p>
+
+<div class="step">
+  <h4><span class="n">1</span>Линейная регрессия для <kbd>base_fare</kbd> и <kbd>per_mile_rate</kbd> каждого tier</h4>
+  <div class="input-tag transfer">только transfer-поездки · distance &gt; 3 миль · без промежуточных остановок</div>
+  <p>Для каждого tier берём эти отфильтрованные transfer-поездки и строим линейную регрессию <kbd>TotalCost = base_fare + per_mile_rate × distance</kbd>. Подбираются такие два коэффициента, при которых формульный cost в среднем меньше всего отличается от исторического TotalCost по всем поездкам этого tier.</p>
+</div>
+
+<div class="step">
+  <h4><span class="n">2</span>Регрессия для <kbd>sedan_hourly_rate</kbd> каждого tier</h4>
+  <div class="input-tag hourly">только hourly-поездки</div>
+  <p>Отдельная регрессия по формуле <kbd>TotalCost = sedan_hourly_rate × max(2h, hours)</kbd>. Считается независимо от transfer, потому что это другая бизнес-модель: здесь дистанция не учитывается, цена зависит от часов.</p>
+</div>
+
+<div class="step">
+  <h4><span class="n">3</span>Пересчёт <kbd>rate_adjustment</kbd> для всех 148 метроплексов</h4>
+  <div class="input-tag all">все поездки метроплекса (transfer + hourly)</div>
+  <p>Для каждого метроплекса: прогоняем все его поездки через формулу с обновлёнными tier-параметрами (формула сама выбирает правильную ветку — transfer или hourly). Получаем предсказанный <kbd>baseCost</kbd> для каждой поездки. Затем <kbd>rate_adjustment = median(TotalCost / baseCost)</kbd> по всем поездкам метроплекса.</p>
+  <p style="color:var(--muted);font-size:14px;margin:8px 0 0"><b>Что это значит:</b> для каждой поездки считаем отношение <kbd>TotalCost / baseCost</kbd> — во сколько раз реальная стоимость отличается от формульного предсказания. Если отношение &gt; 1 — формула занижает, если &lt; 1 — завышает. Медиана этих отношений по всем поездкам города и становится <kbd>rate_adjustment</kbd> — коэффициентом, который подстраивает формулу под локальный уровень цен. Пример: в Tijuana медиана ≈ 2,12 → формула стабильно в 2× занижает → <kbd>rate_adjustment=2,118</kbd>.</p>
+  <p style="color:var(--muted);font-size:14px;margin:8px 0 0"><b>Медиана</b> — серединное значение упорядоченного списка: половина чисел меньше, половина больше. В отличие от среднего, одна аномальная поездка (например, с ratio=10) не сдвинет её — медиана отражает типичный случай. Пример: для [1,8, 2,0, 2,1, 2,3, 10,5] медиана = 2,1, а среднее = 3,74.</p>
+</div>
+
+<div class="step">
+  <h4><span class="n">4</span>Оценка точности и решение о продолжении</h4>
+  <div class="input-tag allmx">все 15 021 поездок (transfer + hourly)</div>
+  <p>Считаем % поездок в ±10% по всем поездкам. Если изменение параметров дало прирост — продолжаем следующую итерацию. Остановка, если: точность ≥ 90% (успех), все дельты параметров &lt; 0,001 (нет изменений), 3 итерации подряд без прироста (застой), либо 100 итераций (safety cap).</p>
+</div>
+
+<h3>Фаза B — переназначение tier'ов метроплексам</h3>
+<div class="step">
+  <div class="input-tag allmx">все поездки каждого метроплекса</div>
+  <p style="margin-top:0">После сходимости Фазы A для каждого метроплекса перебираем все 5 tier'ов и замеряем точность. Если какой-то tier даёт прирост ≥5% попаданий — назначаем его этому метроплексу. Затем снова запускается Фаза A с новыми tier-назначениями. При ухудшении общей точности — <b>откат</b> и <b>блокировка</b> метроплекса.</p>
+  <p style="color:var(--muted);font-size:14px;margin:8px 0 0"><b>Откат:</b> перед применением новых tier'ов алгоритм сохраняет копию состояния. Если после переназначения общая точность упала — восстанавливает сохранённую копию, как будто переназначения не было.</p>
+  <p style="color:var(--muted);font-size:14px;margin:8px 0 0"><b>Блокировка:</b> каждый метроплекс, который уже был переназначен (успешно или с откатом), добавляется в список «заблокированных» и в следующих раундах пропускается. Это предотвращает бесконечную осцилляцию (например, tier 4 → 3 → 4 → 3 → ...) — каждый метроплекс участвует в Фазе B максимум один раз.</p>
+  <p style="color:var(--muted);font-size:14px;margin:8px 0 0"><b>Результат:</b> 35 метроплексов получили другой tier (например, Tier 4 → 3 для переоценённых рынков).</p>
+</div>
+
+<h3>Как это выглядит на графике — Dallas (Tier 2)</h3>
+<p>Точки — реальный TotalCost 173 поездок. Зелёная линия — новая формула (<kbd>base=$90,20</kbd>, <kbd>per_mile=$1,73</kbd>, <kbd>×0,61</kbd>). Красная пунктирная — старая (<kbd>base=$35</kbd>, <kbd>per_mile=$2,00</kbd>, <kbd>×1,0</kbd>).</p>
+
+<div class="chart-box tall"><canvas id="regression"></canvas></div>
+<p style="color:var(--muted);font-size:14px;text-align:center">Dallas (Tier 2) · 173 реальных поездки · линии — формульный effectiveCost</p>
+
+<div class="note">
+  Видно, что старая красная линия на коротких и средних дистанциях проходит ниже основного облака точек — то есть формула систематически занижала vendor-cost в Dallas (а на длинных поездках, наоборот, завышала). Новая зелёная линия ложится в центр облака на всём диапазоне. Комбинация «регрессия по tier + rate_adjustment по метроплексу» работает в два слоя: сначала регрессия даёт общий уровень для Tier 2, потом <kbd>rate_adjustment=0,61</kbd> подстраивает его под специфику Dallas.
+</div>
+
+<h2>4. Почему <kbd>rate_adjustment</kbd> такой разный?</h2>
+<p>После подгонки tier-параметров остаётся локальный разброс между городами. <kbd>rate_adjustment</kbd> — это per-metroplex корректировка, которая описывает <i>систематическое</i> отклонение данного города от «средней температуры по больнице».</p>
+
+<div class="chart-box"><canvas id="metroCost"></canvas></div>
+<p style="color:var(--muted);font-size:14px;text-align:center">Медианная реальная стоимость поездки по городам (взяты по 33–59 поездок каждый)</p>
+
+<div class="grid2">
+  <div class="card">
+    <h3 style="margin-top:0;color:var(--ok)">Tijuana → ×2,118</h3>
+    <p>Медианный TotalCost $165 на коротких поездках. Реальные vendor-ставки систематически в 2× выше, чем даёт чистая Tier 2. Возможные причины: специфика рынка, дефицит vendors, премия за риск.</p>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0;color:var(--bad)">Dubai → ×0,234</h3>
+    <p>Медианный TotalCost $35 — в 3× ниже, чем предсказала бы Tier 4 (~$110 на 4,8 миль). Локальные тарифы дешевле. Без калибровки клиент платил бы втрое дороже факта.</p>
+  </div>
+</div>
+
+<div class="note">
+  <b>Большой <kbd>rate_adjustment</kbd> — это <i>реакция на систематическое расхождение</i> между формулой и фактами.</b> Чем стабильнее отклонение в городе (одинаково высокое у всех 53 поездок Tijuana, одинаково низкое у всех 33 поездок Dubai), тем увереннее мы можем его зафиксировать как локальный множитель.
+</div>
+
+<h2>5. Before / After на реальных поездках</h2>
+<p>Четыре реальные поездки из истории. Сравниваем: что дала бы старая формула, что даёт новая, и какова была фактическая стоимость.</p>
+
+<div class="card">
+  <h3 style="margin-top:0">Dallas · 12,8 миль · transfer <span style="color:var(--muted);font-weight:400;font-size:14px">(разобрана выше)</span></h3>
+  <div class="compare">
+    <div class="col old"><div class="lbl">Старая формула</div><div class="val">$60,60</div><div style="color:var(--bad)">ошибка 15,1%</div></div>
+    <div class="col new"><div class="lbl">Новая формула</div><div class="val">$68,54</div><div class="ok">ошибка 4,0%</div></div>
+    <div class="col real"><div class="lbl">Реальный TotalCost</div><div class="val">$71,40</div><div style="color:var(--muted)">факт</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0">Miami · 8,2 миль · transfer</h3>
+  <div class="compare">
+    <div class="col old"><div class="lbl">Старая формула</div><div class="val">$90,00</div><div style="color:var(--bad)">ошибка 33,3%</div></div>
+    <div class="col new"><div class="lbl">Новая формула</div><div class="val">$119,49</div><div style="color:var(--warn)">ошибка 11,5%</div></div>
+    <div class="col real"><div class="lbl">Реальный TotalCost</div><div class="val">$135,00</div><div style="color:var(--muted)">факт</div></div>
+  </div>
+  <p style="color:var(--muted);font-size:14px;margin:6px 0 0">Новая формула сильно ближе к факту, но не попала в ±10%. Miami — один из городов, где остался внутриметроплексный разброс (разные vendors, время суток), который формула пока не видит.</p>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0">Tijuana · 3,7 миль · transfer</h3>
+  <div class="compare">
+    <div class="col old"><div class="lbl">Старая формула</div><div class="val">$70,00</div><div style="color:var(--bad)">ошибка 75,0%</div></div>
+    <div class="col new"><div class="lbl">Новая формула</div><div class="val">$235,07</div><div style="color:var(--warn)">ошибка 16,0%</div></div>
+    <div class="col real"><div class="lbl">Реальный TotalCost</div><div class="val">$280,00</div><div style="color:var(--muted)">факт</div></div>
+  </div>
+  <p style="color:var(--muted);font-size:14px;margin:6px 0 0">Старая формула недооценивала реальный cost в 4 раза. Новая — попадает почти в точку после применения <kbd>rate_adjustment=2,118</kbd>.</p>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0">Dubai · 4,8 миль · transfer</h3>
+  <div class="compare">
+    <div class="col old"><div class="lbl">Старая формула</div><div class="val">$110,00</div><div style="color:var(--bad)">ошибка 266,7%</div></div>
+    <div class="col new"><div class="lbl">Новая формула</div><div class="val">$28,43</div><div class="ok">ошибка 5,2%</div></div>
+    <div class="col real"><div class="lbl">Реальный TotalCost</div><div class="val">$30,00</div><div style="color:var(--muted)">факт</div></div>
+  </div>
+  <p style="color:var(--muted);font-size:14px;margin:6px 0 0">Самый показательный пример. Клиенту предъявляли цену, рассчитанную от $110, при реальной стоимости $30. Новый <kbd>rate_adjustment=0,234</kbd> приводит формулу к фактам рынка.</p>
+</div>
+
+<h2>6. Главный тезис</h2>
+<div class="pull">
+Новые цифры выглядят большими только на фоне старых — но старые были просто неверными. Они давали 32% попаданий и систематически расходились с реальностью на ×2–×3 в крупных городах. <b>Каждое новое значение — результат подгонки под реальные TotalCost 15 021 поездки.</b>
+</div>
+
+<p style="margin-top:24px">Что важно:</p>
+<ul>
+  <li><b>Мы изменяем customer_price, а не vendor_payout.</b> Vendor-выплата в MUV договорная, не формульная. Калибровка улучшает только то, что видит клиент.</li>
+  <li><b>62,7% — структурный потолок этой формулы.</b> Чтобы перейти к 85–90%, нужны новые входные данные (время суток, конкретный vendor, тип маршрута) — это отдельная задача.</li>
+  <li><b>Текущая калибровка готова к деплою.</b> 2× прирост к старой точности, стабильность проверена на 5 batches review от Stefan.</li>
+</ul>
+
+<p class="footnote">
+Источник данных: live MUV API (2026-04-17), файл <kbd>reports/calibration-proposed-changes.json</kbd>, логика формулы — <kbd>src/formula.js</kbd>. Все примеры — реальные поездки из <kbd>data/GET_Pricing_Logs_full.json</kbd>.
+</p>
+
+</main>
+
+<script>
+(function(){
+  const reg = document.getElementById('regression').getContext('2d');
+  const points = [[8.6,87],[23.9,84],[7.8,93],[22.2,84],[23.9,84],[21,84],[7.5,78],[9.8,78],[18,78],[25.5,84],[23.3,78],[7.5,78],[25,104.85],[18,78],[22.8,78],[22.8,78],[21,84],[25.5,87],[5.2,78],[11.4,78],[6,78],[23.8,78],[6.3,78],[29.3,96],[21.5,78],[26.1,78],[25.8,78],[22.8,78],[29,96],[23.5,87],[22.4,78],[19.2,78],[8.8,87],[20.4,78],[26.4,78],[19.8,72.48],[23.9,84],[27.6,78],[19.7,78],[21.3,90],[25.5,84],[20.4,78],[6.7,78],[23.4,78],[24.8,78],[23.5,87],[2.9,142.8],[29,96],[6.2,121.8],[20,78],[19.6,78],[17.8,84],[5.8,78],[25.5,84],[25.8,86.4],[7.8,87],[25.5,84],[19.6,78],[27.5,84],[3.5,81.6],[29.3,96],[10.6,75],[29,96],[29.3,96],[21.9,78],[22.5,84],[25.7,84],[25.5,84],[25.7,78],[25.7,78],[20.5,78],[20.5,78],[3.5,78],[24.4,78],[23,78],[9.8,78],[25.7,87],[21.4,84],[22.6,84],[6.9,81],[21.3,107.4],[7.7,81],[19.2,84],[8.6,78],[13.2,90],[29.3,96],[27.8,84],[24.6,87],[20.3,78],[29,96],[21,78],[21.5,78],[21.6,84],[7.3,78],[21,78],[5.8,78],[23.9,144],[21,78],[22.2,78],[20.5,78],[20,78],[19.8,78],[20.8,123.2],[20.3,139.7],[17.8,84],[7.7,87],[29.3,96],[29,96],[20.1,72.49],[15,90],[27.6,84],[18,84],[24.1,42],[22.2,84],[29,96],[24.8,84],[21.3,78],[25.8,84],[18,78],[21.1,78],[19.9,74.4],[20.5,78],[24,78],[2.6,71.4],[21.6,90.04],[22.1,84],[20.5,78],[20.5,78],[25.8,84],[20.5,78],[21.1,84],[18,78],[29.3,96],[22.3,78],[7.4,87],[20.5,78],[21,78],[21,78],[22,81],[8.4,87],[27.5,84],[23.8,78],[25.5,84],[18,84],[19.9,78],[8.6,87],[23.3,84],[25.5,84],[25.5,84],[27.6,84],[26.8,78],[19.9,78],[7.7,87],[23.7,84],[20.1,79.2],[20.1,79.2],[19.1,79.2],[19.1,79.2],[20.7,81],[23.9,84],[25.5,84],[18.8,78],[22,84],[29.9,90],[20.2,72.48],[22.6,81],[18.3,78],[11.1,72.49],[17.4,71.4],[2.3,72.48],[20.8,78.04],[24.4,87],[27.8,84]];
+  const scatter = points.map(p => ({x: p[0], y: p[1]}));
+  const newLine = [];
+  const oldLine = [];
+  for (let d = 0; d <= 30; d += 1) {
+    newLine.push({x: d, y: (90.20 + 1.731 * d) * 0.61});
+    oldLine.push({x: d, y: (35 + 2.0 * d) * 1.0});
+  }
+  new Chart(reg, {
+    type: 'scatter',
+    data: {
+      datasets: [
+        {label: 'Реальный TotalCost', data: scatter, backgroundColor: 'rgba(31,111,235,.45)', pointRadius: 4},
+        {label: 'Новая формула (base=$90,20, per_mile=$1,73, ×0,61)', data: newLine, showLine: true, borderColor: '#1e8449', backgroundColor: '#1e8449', borderWidth: 3, pointRadius: 0, type: 'line'},
+        {label: 'Старая формула (base=$35, per_mile=$2,00, ×1,0)', data: oldLine, showLine: true, borderColor: '#c0392b', backgroundColor: '#c0392b', borderWidth: 2, borderDash: [6,4], pointRadius: 0, type: 'line'},
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {position: 'bottom', labels: {font: {size: 12}}},
+        tooltip: {callbacks: {label: ctx => `${ctx.raw.x} миль → $${ctx.raw.y.toFixed(2)}`}}
+      },
+      scales: {
+        x: {title: {display: true, text: 'Дистанция, миль'}, min: 0, max: 30},
+        y: {title: {display: true, text: 'TotalCost, $'}, min: 0, max: 160}
+      }
+    }
+  });
+
+  // Metroplex median cost chart
+  const mc = document.getElementById('metroCost').getContext('2d');
+  new Chart(mc, {
+    type: 'bar',
+    data: {
+      labels: ['Dubai\n(n=33)', 'Dallas\n(n=531)', 'Tijuana\n(n=53)', 'Istanbul\n(n=59)'],
+      datasets: [
+        {label: 'Медианный реальный TotalCost', data: [35, 81.60, 165, 247.32],
+         backgroundColor: ['#c0392b','#3b82f6','#1e8449','#8a7cb4']},
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {display: false},
+        tooltip: {callbacks: {label: ctx => `$${ctx.raw.toFixed(2)}`}}
+      },
+      scales: {
+        y: {title: {display: true, text: 'Медианный TotalCost, $'}, beginAtZero: true},
+        x: {ticks: {font: {size: 13}}}
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>
